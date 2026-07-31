@@ -1886,72 +1886,132 @@ end
 end)
 
 -- === SAVAŞ SEKMESİ ===
-local CombatCard = CreateCategoryCard(CombatTab, "Saldırı ve Savunma", "rbxassetid://6031090124")
 local savedPositions = {}
+local KillAuraDist = 20
+local KillAuraTarget = "Yakın"
 
-CreateToggle(CombatCard, "Otomatik Katlet", "Herkesi önüne çeker ve katleder.", 2, function(state)
-Toggles.AutoKill = state
-if state then
-savedPositions = {}
-for _, plr in pairs(Players:GetPlayers()) do
-if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-savedPositions[plr] = plr.Character.HumanoidRootPart.CFrame
-end
-end
-Notify("Herkes önüne getiriliyor...")
+-- 1. KART: COMBAT ASSISTANT
+local CombatAssistCard = CreateCategoryCard(CombatTab, "Combat Assistant", "rbxassetid://6031090124")
 
-task.spawn(function()
-while Toggles.AutoKill do
-local char = LocalPlayer.Character
-local knife = LocalPlayer.Backpack:FindFirstChild("Knife") or (char and char:FindFirstChild("Knife"))
+CreateToggle(CombatAssistCard, "Kill Aura", "Etraftaki oyunculara otomatik saldırır.", 2, function(state)
+    Toggles.AutoKill = state
+    if state then
+        savedPositions = {}
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                savedPositions[plr] = plr.Character.HumanoidRootPart.CFrame
+            end
+        end
+        Notify("Kill Aura Aktif. Mesafe: " .. KillAuraDist)
 
-if char and char:FindFirstChild("HumanoidRootPart") then
-local myHrp = char.HumanoidRootPart
-if knife then
-if knife.Parent ~= char then knife.Parent = char end
-knife:Activate()
-end
+        task.spawn(function()
+            while Toggles.AutoKill do
+                local char = LocalPlayer.Character
+                local knife = LocalPlayer.Backpack:FindFirstChild("Knife") or (char and char:FindFirstChild("Knife"))
 
-for _, plr in pairs(Players:GetPlayers()) do
-if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-local targetHrp = plr.Character.HumanoidRootPart
-local hum = plr.Character:FindFirstChild("Humanoid")
-if hum and hum.Health > 0 then
-targetHrp.CFrame = myHrp.CFrame * CFrame.new(0, 0, -3)
-end
-end
-end
-end
-task.wait(0.05)
-end
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local myHrp = char.HumanoidRootPart
+                    if knife then
+                        if knife.Parent ~= char then knife.Parent = char end
+                        knife:Activate()
+                    end
+
+                    for _, plr in pairs(Players:GetPlayers()) do
+                        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                            local targetHrp = plr.Character.HumanoidRootPart
+                            local hum = plr.Character:FindFirstChild("Humanoid")
+                            local dist = (myHrp.Position - targetHrp.Position).Magnitude
+
+                            -- Slider'dan gelen Mesafe (Distance) Kontrolü
+                            if hum and hum.Health > 0 and dist <= KillAuraDist then
+                                targetHrp.CFrame = myHrp.CFrame * CFrame.new(0, 0, -3)
+                            end
+                        end
+                    end
+                end
+                task.wait(0.05)
+            end
+        end)
+    else
+        for plr, oldCFrame in pairs(savedPositions) do
+            if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                plr.Character.HumanoidRootPart.CFrame = oldCFrame
+            end
+        end
+        savedPositions = {}
+        Notify("Kill Aura durduruldu.")
+    end
 end)
-else
-for plr, oldCFrame in pairs(savedPositions) do
-if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-plr.Character.HumanoidRootPart.CFrame = oldCFrame
-end
-end
-savedPositions = {}
-Notify("Katliam durduruldu, oyuncular geri bırakıldı.")
-end
+
+CreateSlider(CombatAssistCard, "Mesafe (Studs)", 1, 5, 50, 20, function(val)
+    KillAuraDist = val
 end)
+
+CreateDropdown(CombatAssistCard, "Hedef Modu", 1, {"Yakın (Nearest)", "Katil", "Herkes"}, 1, function(selected)
+    KillAuraTarget = selected
+    Notify("Hedef Modu: " .. selected)
+end)
+
+
+-- 2. KART: WEAPON (SİLAH)
+local WeaponCard = CreateCategoryCard(CombatTab, "Weapon", "rbxassetid://6031093848") 
+
+local HitboxSizeVal = 3
+local HitboxConnection
+
+CreateToggle(WeaponCard, "Hitbox Extender", "Düşmanların hitbox menzilini genişletir.", 1, function(state)
+    if state then
+        HitboxConnection = RunService.RenderStepped:Connect(function()
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
+                    local role = GetRole and GetRole(plr) or "Murderer" -- GetRole fonksiyonuna güvenli erişim
+                    if role == "Murderer" or role == "Sheriff" then
+                        plr.Character.Head.Size = Vector3.new(HitboxSizeVal, HitboxSizeVal, HitboxSizeVal)
+                        plr.Character.Head.Transparency = 0.6
+                        plr.Character.Head.CanCollide = false
+                    else
+                        plr.Character.Head.Size = Vector3.new(1.2, 1, 1)
+                        plr.Character.Head.Transparency = 0
+                    end
+                end
+            end
+        end)
+        Notify("Hitbox Extender Aktif.")
+    else
+        if HitboxConnection then HitboxConnection:Disconnect() HitboxConnection = nil end
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr.Character and plr.Character:FindFirstChild("Head") then
+                plr.Character.Head.Size = Vector3.new(1.2, 1, 1)
+                plr.Character.Head.Transparency = 0
+            end
+        end
+        Notify("Hitbox normale döndü.")
+    end
+end)
+
+CreateSlider(WeaponCard, "Hitbox Size", 1, 2, 15, 3, function(val)
+    HitboxSizeVal = val
+end)
+
+
+-- 3. KART: AIMBOT
+local AimbotCard = CreateCategoryCard(CombatTab, "Aimbot", "rbxassetid://6031225819")
 
 local AimbotConnection
-local AimbotSmoothness = 0.35 -- Hızlı ve mobil joystiği dondurmayan pürüzsüz kilitlenme
+local AimbotSmoothness = 0.25
+local AimbotFOV = 150
+local AimbotTargetBone = "Head"
 
-CreateToggle(CombatCard, "Katili Vur (Aimbot)", "Katil ekrana girdiği an kilitlenir ve Crosshair açılır.", 2, function(state)
+CreateToggle(AimbotCard, "Aimbot", "Hedefe pürüzsüzce kilitlenir.", 2, function(state)
     Toggles.ShootMurderer = state
     local cam = Workspace.CurrentCamera
 
     if state then
-        Notify("Aimbot Aktif: Katil görüş alanına girdiği an kilitlenecek.")
-        
+        Notify("Aimbot Aktif.")
         AimbotConnection = RunService.RenderStepped:Connect(function()
             if not Toggles.ShootMurderer then return end
-            
             local murderer = nil
             
-            -- Katili Bul (Envanterinde veya karakterinde Knife olan kişi)
             for _, plr in pairs(Players:GetPlayers()) do
                 if plr ~= LocalPlayer and plr.Character and (plr.Backpack:FindFirstChild("Knife") or plr.Character:FindFirstChild("Knife")) then
                     local hum = plr.Character:FindFirstChild("Humanoid")
@@ -1963,86 +2023,64 @@ CreateToggle(CombatCard, "Katili Vur (Aimbot)", "Katil ekrana girdiği an kilitl
             end
 
             local locked = false
-
-            if murderer and murderer.Character and murderer.Character:FindFirstChild("Head") then
-                local targetPart = murderer.Character.Head
+            if murderer and murderer.Character and murderer.Character:FindFirstChild(AimbotTargetBone) then
+                local targetPart = murderer.Character[AimbotTargetBone]
                 local vector, onScreen = cam:WorldToViewportPoint(targetPart.Position)
 
-                -- Sadece katil görüş açısındaysa işlem yap
                 if onScreen then
-                    local rayParams = RaycastParams.new()
-                    rayParams.FilterDescendantsInstances = {LocalPlayer.Character, murderer.Character}
-                    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                    -- Slider'a bağlı FOV (Görüş Açısı) Kontrolü
+                    local mousePos = UserInputService:GetMouseLocation()
+                    local dist = (Vector2.new(vector.X, vector.Y) - mousePos).Magnitude
 
-                    local raycastResult = Workspace:Raycast(cam.CFrame.Position, (targetPart.Position - cam.CFrame.Position).Unit * 500, rayParams)
+                    if dist <= AimbotFOV then
+                        local rayParams = RaycastParams.new()
+                        rayParams.FilterDescendantsInstances = {LocalPlayer.Character, murderer.Character}
+                        rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
-                    -- Arada duvar yoksa (doğrudan görüyorsan) pürüzsüzce kilitlen
-                    if not raycastResult then 
-                        locked = true
-                        local targetCFrame = CFrame.lookAt(cam.CFrame.Position, targetPart.Position)
-                        cam.CFrame = cam.CFrame:Lerp(targetCFrame, AimbotSmoothness)
-                        
-                        -- Kilitlendiği an Crosshair'i animasyonlu şekilde (Pop-up) ekrana getir
-                        if not CrosshairContainer.Visible then
-                            CrosshairContainer.Visible = true
-                            OuterRing.Size = UDim2.new(0, 60, 0, 60)
-                            OuterRing.Position = UDim2.new(0.5, -30, 0.5, -30)
-                            OuterRing.ImageTransparency = 1
+                        local raycastResult = Workspace:Raycast(cam.CFrame.Position, (targetPart.Position - cam.CFrame.Position).Unit * 500, rayParams)
+
+                        if not raycastResult then 
+                            locked = true
+                            local targetCFrame = CFrame.lookAt(cam.CFrame.Position, targetPart.Position)
+                            cam.CFrame = cam.CFrame:Lerp(targetCFrame, AimbotSmoothness)
                             
-                            TweenService:Create(OuterRing, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                                Size = UDim2.new(0, 40, 0, 40),
-                                Position = UDim2.new(0.5, -20, 0.5, -20),
-                                ImageTransparency = 0
-                            }):Play()
+                            if not CrosshairContainer.Visible then
+                                CrosshairContainer.Visible = true
+                                OuterRing.Size = UDim2.new(0, 60, 0, 60)
+                                OuterRing.Position = UDim2.new(0.5, -30, 0.5, -30)
+                                OuterRing.ImageTransparency = 1
+                                TweenService:Create(OuterRing, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                                    Size = UDim2.new(0, 40, 0, 40),
+                                    Position = UDim2.new(0.5, -20, 0.5, -20),
+                                    ImageTransparency = 0
+                                }):Play()
+                            end
                         end
                     end
                 end
             end
             
-            -- Eğer hedef öldüyse, duvarın arkasına geçittiyse veya ekrandan çıktıysa crosshair'i anında gizle
             if not locked and CrosshairContainer.Visible then
                 CrosshairContainer.Visible = false
             end
         end)
     else
-        if AimbotConnection then 
-            AimbotConnection:Disconnect() 
-            AimbotConnection = nil 
-        end
+        if AimbotConnection then AimbotConnection:Disconnect() AimbotConnection = nil end
         CrosshairContainer.Visible = false
         Notify("Aimbot Kapatıldı.")
     end
 end)
-local HitboxConnection
-CreateToggle(CombatCard, "Hitbox Expander", "Katilin ve Şerifin kafasını devasa yapar.", 1, function(state)
-if state then
-HitboxConnection = RunService.RenderStepped:Connect(function()
-for _, plr in pairs(Players:GetPlayers()) do
-if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
-local role = GetRole(plr)
-if role == "Murderer" or role == "Sheriff" then
-plr.Character.Head.Size = Vector3.new(10, 10, 10)
-plr.Character.Head.Transparency = 0.6
-plr.Character.Head.CanCollide = false
-else
--- Masumları normale döndür
-plr.Character.Head.Size = Vector3.new(1.2, 1, 1)
-plr.Character.Head.Transparency = 0
-end
-end
-end
+
+CreateSlider(AimbotCard, "FOV Radius", 2, 50, 500, 150, function(val)
+    AimbotFOV = val
 end)
-Notify("Hitbox Expander Aktif.")
-else
-if HitboxConnection then HitboxConnection:Disconnect() HitboxConnection = nil end
-for _, plr in pairs(Players:GetPlayers()) do
-if plr.Character and plr.Character:FindFirstChild("Head") then
-plr.Character.Head.Size = Vector3.new(1.2, 1, 1)
-plr.Character.Head.Transparency = 0
-end
-end
-Notify("Hitboxlar normale döndü.")
-end
+
+CreateSlider(AimbotCard, "Smoothing", 2, 1, 10, 2, function(val)
+    AimbotSmoothness = val / 10 
+end)
+
+CreateDropdown(AimbotCard, "Bone (Bölge)", 2, {"Head", "HumanoidRootPart", "Torso"}, 1, function(selected)
+    AimbotTargetBone = selected
 end)
 -- === OYUNCU SEKMESİ ===
 local HareketCard = CreateCategoryCard(PlayerTab, "Hareket", "rbxassetid://6031094028")
