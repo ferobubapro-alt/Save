@@ -1792,6 +1792,132 @@ local function CreateButton(parentContainer, name, description, minTier, default
     end)
       table.insert(FeatureElements, {UI = RowFrame, Tier = minTier}) -- YENİ EKLENDİ
 end
+local function CreateInputButton(parentContainer, name, description, minTier, placeholder, btnText, callback)
+    local RowFrame = Instance.new("Frame")
+    RowFrame.Size = UDim2.new(1, -10, 0, 42)
+    RowFrame.Position = UDim2.new(0, 5, 0, 0)
+    RowFrame.BackgroundTransparency = 1 
+    RowFrame.ZIndex = 15
+    RowFrame.Parent = parentContainer
+
+    local TierColor = (minTier == 2 and Color3.fromRGB(138, 43, 226)) or (minTier == 1 and Color3.fromRGB(50, 150, 255)) or Color3.fromRGB(100, 255, 100)
+    local TierDot = Instance.new("Frame")
+    TierDot.Size = UDim2.new(0, 6, 0, 6)
+    TierDot.Position = UDim2.new(0, 10, 0, 10)
+    TierDot.BackgroundColor3 = TierColor
+    TierDot.ZIndex = 20
+    Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
+    TierDot.Parent = RowFrame
+
+    local TitleLbl = Instance.new("TextLabel")
+    TitleLbl.Size = UDim2.new(1, -150, 0, 16)
+    TitleLbl.Position = UDim2.new(0, 22, 0, 5)
+    TitleLbl.BackgroundTransparency = 1
+    TitleLbl.Text = name
+    TitleLbl.Font = Enum.Font.GothamMedium
+    TitleLbl.TextColor3 = Color3.fromRGB(230, 230, 230)
+    TitleLbl.TextSize = 12
+    TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLbl.ZIndex = 20
+    TitleLbl.Parent = RowFrame
+
+    local DescLbl = Instance.new("TextLabel")
+    DescLbl.Size = UDim2.new(1, -150, 0, 14)
+    DescLbl.Position = UDim2.new(0, 22, 0, 22)
+    DescLbl.BackgroundTransparency = 1
+    DescLbl.Text = description
+    DescLbl.Font = Enum.Font.Gotham
+    DescLbl.TextColor3 = Color3.fromRGB(140, 140, 150)
+    DescLbl.TextSize = 10
+    DescLbl.TextXAlignment = Enum.TextXAlignment.Left
+    DescLbl.TextTruncate = Enum.TextTruncate.AtEnd
+    DescLbl.ZIndex = 20
+    DescLbl.Parent = RowFrame
+
+    local ActionBtnFrame = Instance.new("Frame")
+    ActionBtnFrame.Size = UDim2.new(0, 45, 0, 22)
+    ActionBtnFrame.Position = UDim2.new(1, -55, 0.5, -11)
+    ActionBtnFrame.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+    ActionBtnFrame.ZIndex = 20
+    Instance.new("UICorner", ActionBtnFrame).CornerRadius = UDim.new(0, 4)
+    ActionBtnFrame.Parent = RowFrame
+
+    local ActionTxt = Instance.new("TextLabel")
+    ActionTxt.Size = UDim2.new(1, 0, 1, 0)
+    ActionTxt.BackgroundTransparency = 1
+    ActionTxt.Text = btnText
+    ActionTxt.Font = Enum.Font.GothamBold
+    ActionTxt.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ActionTxt.TextSize = 10
+    ActionTxt.ZIndex = 21
+    ActionTxt.Parent = ActionBtnFrame
+    
+    local ClickArea = Instance.new("TextButton")
+    ClickArea.Size = UDim2.new(1, 0, 1, 0)
+    ClickArea.BackgroundTransparency = 1
+    ClickArea.Text = ""
+    ClickArea.ZIndex = 25
+    ClickArea.Parent = ActionBtnFrame
+
+    local InputBox = Instance.new("TextBox")
+    InputBox.Size = UDim2.new(0, 85, 0, 22)
+    InputBox.Position = UDim2.new(1, -145, 0.5, -11)
+    InputBox.BackgroundColor3 = Color3.fromRGB(20, 15, 30)
+    InputBox.PlaceholderText = placeholder
+    InputBox.Text = ""
+    InputBox.Font = Enum.Font.Gotham
+    InputBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+    InputBox.TextSize = 9
+    InputBox.ZIndex = 21
+    Instance.new("UICorner", InputBox).CornerRadius = UDim.new(0, 4)
+    InputBox.Parent = RowFrame
+    
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Color3.fromRGB(138, 43, 226)
+    UIStroke.Thickness = 1
+    UIStroke.Transparency = 0.5
+    UIStroke.Parent = InputBox
+
+    ClickArea.MouseButton1Click:Connect(function()
+        if UserTierValue < minTier then Notify("Bu özellik yetki gerektirir!"); return end
+        pcall(function() callback(InputBox.Text) end)
+    end)
+    table.insert(FeatureElements, {UI = RowFrame, Tier = minTier})
+end
+
+local function CreateInfoRow(parentContainer, name, defaultVal)
+    local RowFrame = Instance.new("Frame")
+    RowFrame.Size = UDim2.new(1, -20, 0, 20)
+    RowFrame.Position = UDim2.new(0, 10, 0, 0)
+    RowFrame.BackgroundTransparency = 1 
+    RowFrame.ZIndex = 20
+    RowFrame.Parent = parentContainer
+
+    local TitleLbl = Instance.new("TextLabel")
+    TitleLbl.Size = UDim2.new(0.5, 0, 1, 0)
+    TitleLbl.BackgroundTransparency = 1
+    TitleLbl.Text = name
+    TitleLbl.Font = Enum.Font.GothamMedium
+    TitleLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    TitleLbl.TextSize = 11
+    TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLbl.ZIndex = 21
+    TitleLbl.Parent = RowFrame
+
+    local ValLbl = Instance.new("TextLabel")
+    ValLbl.Size = UDim2.new(0.5, 0, 1, 0)
+    ValLbl.Position = UDim2.new(0.5, 0, 0, 0)
+    ValLbl.BackgroundTransparency = 1
+    ValLbl.Text = defaultVal
+    ValLbl.Font = Enum.Font.Gotham
+    ValLbl.TextColor3 = Color3.fromRGB(150, 150, 150)
+    ValLbl.TextSize = 11
+    ValLbl.TextXAlignment = Enum.TextXAlignment.Right
+    ValLbl.ZIndex = 21
+    ValLbl.Parent = RowFrame
+    
+    return ValLbl
+end
 -- ==========================================
 -- ÖZELLİKLER VE SEKMELER
 -- ==========================================
@@ -1886,14 +2012,19 @@ end
 end)
 
 -- === SAVAŞ SEKMESİ ===
+local CombatSettings = {
+    KillAuraDist = 30, KillAuraTarget = "Nearest", TeamCheck = false, WallCheck = false,
+    HitboxSize = 3, SwingReach = false, NoCooldown = false, FastAttack = false,
+    AimbotFOV = 180, AimbotSmooth = 0.25, AimbotBone = "Head", Prediction = false,
+    FlingPower = 500, FlingType = "Side Fling",
+    GodMode = false, AntiParry = false, AntiStun = false, NoKB = false
+}
 local savedPositions = {}
-local KillAuraDist = 20
-local KillAuraTarget = "Yakın"
 
 -- 1. KART: COMBAT ASSISTANT
 local CombatAssistCard = CreateCategoryCard(CombatTab, "Combat Assistant", "rbxassetid://6031090124")
 
-CreateToggle(CombatAssistCard, "Kill Aura", "Etraftaki oyunculara otomatik saldırır.", 2, function(state)
+CreateToggle(CombatAssistCard, "Kill Aura", "Automatically attack players.", 2, function(state)
     Toggles.AutoKill = state
     if state then
         savedPositions = {}
@@ -1902,7 +2033,7 @@ CreateToggle(CombatAssistCard, "Kill Aura", "Etraftaki oyunculara otomatik sald�
                 savedPositions[plr] = plr.Character.HumanoidRootPart.CFrame
             end
         end
-        Notify("Kill Aura Aktif. Mesafe: " .. KillAuraDist)
+        Notify("Kill Aura Aktif. Mesafe: " .. CombatSettings.KillAuraDist)
 
         task.spawn(function()
             while Toggles.AutoKill do
@@ -1922,8 +2053,7 @@ CreateToggle(CombatAssistCard, "Kill Aura", "Etraftaki oyunculara otomatik sald�
                             local hum = plr.Character:FindFirstChild("Humanoid")
                             local dist = (myHrp.Position - targetHrp.Position).Magnitude
 
-                            -- Slider'dan gelen Mesafe (Distance) Kontrolü
-                            if hum and hum.Health > 0 and dist <= KillAuraDist then
+                            if hum and hum.Health > 0 and dist <= CombatSettings.KillAuraDist then
                                 targetHrp.CFrame = myHrp.CFrame * CFrame.new(0, 0, -3)
                             end
                         end
@@ -1942,31 +2072,22 @@ CreateToggle(CombatAssistCard, "Kill Aura", "Etraftaki oyunculara otomatik sald�
         Notify("Kill Aura durduruldu.")
     end
 end)
+CreateSlider(CombatAssistCard, "Distance", 1, 5, 50, 30, function(val) CombatSettings.KillAuraDist = val end)
+CreateDropdown(CombatAssistCard, "Target Mode", 1, {"Nearest", "Murderer", "Everyone"}, 1, function(val) CombatSettings.KillAuraTarget = val end)
+CreateToggle(CombatAssistCard, "Team Check", "Don't attack teammates.", 1, function(state) CombatSettings.TeamCheck = state end)
+CreateToggle(CombatAssistCard, "Wall Check", "Can hit through walls.", 1, function(state) CombatSettings.WallCheck = state end)
 
-CreateSlider(CombatAssistCard, "Mesafe (Studs)", 1, 5, 50, 20, function(val)
-    KillAuraDist = val
-end)
-
-CreateDropdown(CombatAssistCard, "Hedef Modu", 1, {"Yakın (Nearest)", "Katil", "Herkes"}, 1, function(selected)
-    KillAuraTarget = selected
-    Notify("Hedef Modu: " .. selected)
-end)
-
-
--- 2. KART: WEAPON (SİLAH)
+-- 2. KART: WEAPON
 local WeaponCard = CreateCategoryCard(CombatTab, "Weapon", "rbxassetid://6031093848") 
-
-local HitboxSizeVal = 3
 local HitboxConnection
-
-CreateToggle(WeaponCard, "Hitbox Extender", "Düşmanların hitbox menzilini genişletir.", 1, function(state)
+CreateToggle(WeaponCard, "Hitbox Extender", "Extend your hitbox range.", 1, function(state)
     if state then
         HitboxConnection = RunService.RenderStepped:Connect(function()
             for _, plr in pairs(Players:GetPlayers()) do
                 if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
-                    local role = GetRole and GetRole(plr) or "Murderer" -- GetRole fonksiyonuna güvenli erişim
+                    local role = GetRole and GetRole(plr) or "Murderer"
                     if role == "Murderer" or role == "Sheriff" then
-                        plr.Character.Head.Size = Vector3.new(HitboxSizeVal, HitboxSizeVal, HitboxSizeVal)
+                        plr.Character.Head.Size = Vector3.new(CombatSettings.HitboxSize, CombatSettings.HitboxSize, CombatSettings.HitboxSize)
                         plr.Character.Head.Transparency = 0.6
                         plr.Character.Head.CanCollide = false
                     else
@@ -1988,100 +2109,118 @@ CreateToggle(WeaponCard, "Hitbox Extender", "Düşmanların hitbox menzilini gen
         Notify("Hitbox normale döndü.")
     end
 end)
-
-CreateSlider(WeaponCard, "Hitbox Size", 1, 2, 15, 3, function(val)
-    HitboxSizeVal = val
-end)
-
+CreateSlider(WeaponCard, "Hitbox Size", 1, 2, 15, 3, function(val) CombatSettings.HitboxSize = val end)
+CreateToggle(WeaponCard, "Swing Reach", "Increase weapon reach.", 1, function(state) CombatSettings.SwingReach = state end)
+CreateToggle(WeaponCard, "No Cooldown", "Remove attack cooldown.", 1, function(state) CombatSettings.NoCooldown = state end)
+CreateToggle(WeaponCard, "Fast Attack", "Increase attack speed.", 1, function(state) CombatSettings.FastAttack = state end)
 
 -- 3. KART: AIMBOT
 local AimbotCard = CreateCategoryCard(CombatTab, "Aimbot", "rbxassetid://6031225819")
-
 local AimbotConnection
-local AimbotSmoothness = 0.25
-local AimbotFOV = 150
-local AimbotTargetBone = "Head"
-
-CreateToggle(AimbotCard, "Aimbot", "Hedefe pürüzsüzce kilitlenir.", 2, function(state)
+CreateToggle(AimbotCard, "Aimbot", "Lock on to target.", 2, function(state)
     Toggles.ShootMurderer = state
     local cam = Workspace.CurrentCamera
-
     if state then
-        Notify("Aimbot Aktif.")
         AimbotConnection = RunService.RenderStepped:Connect(function()
             if not Toggles.ShootMurderer then return end
             local murderer = nil
-            
             for _, plr in pairs(Players:GetPlayers()) do
                 if plr ~= LocalPlayer and plr.Character and (plr.Backpack:FindFirstChild("Knife") or plr.Character:FindFirstChild("Knife")) then
                     local hum = plr.Character:FindFirstChild("Humanoid")
-                    if hum and hum.Health > 0 then
-                        murderer = plr
-                        break
-                    end
+                    if hum and hum.Health > 0 then murderer = plr break end
                 end
             end
-
             local locked = false
-            if murderer and murderer.Character and murderer.Character:FindFirstChild(AimbotTargetBone) then
-                local targetPart = murderer.Character[AimbotTargetBone]
+            if murderer and murderer.Character and murderer.Character:FindFirstChild(CombatSettings.AimbotBone) then
+                local targetPart = murderer.Character[CombatSettings.AimbotBone]
                 local vector, onScreen = cam:WorldToViewportPoint(targetPart.Position)
-
                 if onScreen then
-                    -- Slider'a bağlı FOV (Görüş Açısı) Kontrolü
                     local mousePos = UserInputService:GetMouseLocation()
                     local dist = (Vector2.new(vector.X, vector.Y) - mousePos).Magnitude
-
-                    if dist <= AimbotFOV then
+                    if dist <= CombatSettings.AimbotFOV then
                         local rayParams = RaycastParams.new()
                         rayParams.FilterDescendantsInstances = {LocalPlayer.Character, murderer.Character}
                         rayParams.FilterType = Enum.RaycastFilterType.Exclude
-
                         local raycastResult = Workspace:Raycast(cam.CFrame.Position, (targetPart.Position - cam.CFrame.Position).Unit * 500, rayParams)
-
                         if not raycastResult then 
                             locked = true
                             local targetCFrame = CFrame.lookAt(cam.CFrame.Position, targetPart.Position)
-                            cam.CFrame = cam.CFrame:Lerp(targetCFrame, AimbotSmoothness)
-                            
+                            cam.CFrame = cam.CFrame:Lerp(targetCFrame, CombatSettings.AimbotSmooth)
                             if not CrosshairContainer.Visible then
                                 CrosshairContainer.Visible = true
                                 OuterRing.Size = UDim2.new(0, 60, 0, 60)
                                 OuterRing.Position = UDim2.new(0.5, -30, 0.5, -30)
                                 OuterRing.ImageTransparency = 1
-                                TweenService:Create(OuterRing, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                                    Size = UDim2.new(0, 40, 0, 40),
-                                    Position = UDim2.new(0.5, -20, 0.5, -20),
-                                    ImageTransparency = 0
-                                }):Play()
+                                TweenService:Create(OuterRing, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0.5, -20, 0.5, -20), ImageTransparency = 0}):Play()
                             end
                         end
                     end
                 end
             end
-            
-            if not locked and CrosshairContainer.Visible then
-                CrosshairContainer.Visible = false
-            end
+            if not locked and CrosshairContainer.Visible then CrosshairContainer.Visible = false end
         end)
     else
         if AimbotConnection then AimbotConnection:Disconnect() AimbotConnection = nil end
         CrosshairContainer.Visible = false
-        Notify("Aimbot Kapatıldı.")
     end
 end)
+CreateSlider(AimbotCard, "FOV Radius", 2, 50, 500, 180, function(val) CombatSettings.AimbotFOV = val end)
+CreateSlider(AimbotCard, "Smoothing", 2, 1, 10, 2, function(val) CombatSettings.AimbotSmooth = val / 10 end)
+CreateDropdown(AimbotCard, "Bone", 2, {"Head", "HumanoidRootPart", "Torso"}, 1, function(val) CombatSettings.AimbotBone = val end)
+CreateToggle(AimbotCard, "Prediction", "Predict target movement.", 2, function(state) CombatSettings.Prediction = state end)
 
-CreateSlider(AimbotCard, "FOV Radius", 2, 50, 500, 150, function(val)
-    AimbotFOV = val
+-- 4. KART: FLING (YENİ)
+local FlingCard = CreateCategoryCard(CombatTab, "Fling", "rbxassetid://6031094028") 
+CreateButton(FlingCard, "Fling All", "Fling all players.", 2, "Fling", function()
+    Notify("Flinging all players with power " .. CombatSettings.FlingPower)
 end)
+CreateInputButton(FlingCard, "Fling Player", "Fling specific player.", 2, "Enter player name...", "Fling", function(txt)
+    if txt ~= "" then Notify("Flinging player: " .. txt) else Notify("Lütfen oyuncu adı girin!") end
+end)
+CreateSlider(FlingCard, "Fling Power", 2, 100, 1000, 500, function(val) CombatSettings.FlingPower = val end)
+CreateDropdown(FlingCard, "Fling Type", 2, {"Side Fling", "Up Fling", "Spin Fling"}, 1, function(val) CombatSettings.FlingType = val end)
 
-CreateSlider(AimbotCard, "Smoothing", 2, 1, 10, 2, function(val)
-    AimbotSmoothness = val / 10 
-end)
+-- 5. KART: MELEE COMBAT (YENİ)
+local MeleeCard = CreateCategoryCard(CombatTab, "Melee Combat", "rbxassetid://6031090124")
+CreateToggle(MeleeCard, "God Mode (Combat)", "Take no damage.", 2, function(state) CombatSettings.GodMode = state end)
+CreateToggle(MeleeCard, "Anti Parry", "Automatically parry attacks.", 1, function(state) CombatSettings.AntiParry = state end)
+CreateToggle(MeleeCard, "Anti Stun", "Prevent stuns and ragdolls.", 1, function(state) CombatSettings.AntiStun = state end)
+CreateToggle(MeleeCard, "No KB", "No knockback.", 1, function(state) CombatSettings.NoKB = state end)
 
-CreateDropdown(AimbotCard, "Bone (Bölge)", 2, {"Head", "HumanoidRootPart", "Torso"}, 1, function(selected)
-    AimbotTargetBone = selected
-end)
+-- 6. KART: TARGET INFO (YENİ ÖZEL TASARIM)
+local InfoCard = CreateCategoryCard(CombatTab, "Target Info", "rbxassetid://6031093848")
+
+local TargetNameTitle = Instance.new("TextLabel")
+TargetNameTitle.Size = UDim2.new(1, -10, 0, 30)
+TargetNameTitle.Position = UDim2.new(0, 5, 0, 5)
+TargetNameTitle.BackgroundTransparency = 1
+TargetNameTitle.Text = "No Target"
+TargetNameTitle.Font = Enum.Font.GothamBold
+TargetNameTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+TargetNameTitle.TextSize = 14
+TargetNameTitle.ZIndex = 21
+TargetNameTitle.Parent = InfoCard
+
+local TargetSub = Instance.new("TextLabel")
+TargetSub.Size = UDim2.new(1, -10, 0, 15)
+TargetSub.Position = UDim2.new(0, 5, 0, 25)
+TargetSub.BackgroundTransparency = 1
+TargetSub.Text = "Select a target to view info."
+TargetSub.Font = Enum.Font.Gotham
+TargetSub.TextColor3 = Color3.fromRGB(150, 150, 160)
+TargetSub.TextSize = 10
+TargetSub.ZIndex = 21
+TargetSub.Parent = InfoCard
+
+local Pad = Instance.new("Frame")
+Pad.Size = UDim2.new(1, 0, 0, 10)
+Pad.BackgroundTransparency = 1
+Pad.Parent = InfoCard
+
+local LblHealth = CreateInfoRow(InfoCard, "Health", "-")
+local LblDistance = CreateInfoRow(InfoCard, "Distance", "-")
+local LblTeam = CreateInfoRow(InfoCard, "Team", "-")
+local LblPing = CreateInfoRow(InfoCard, "Ping", "-")
 -- === OYUNCU SEKMESİ ===
 local HareketCard = CreateCategoryCard(PlayerTab, "Hareket", "rbxassetid://6031094028")
 local UtilityCard = CreateCategoryCard(PlayerTab, "Özel Güçler", "rbxassetid://6031094670")
