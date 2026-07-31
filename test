@@ -505,26 +505,46 @@ end
 Tabs[name] = {Button = TabBtn, Page = TabPage}
 
 TabBtn.MouseButton1Click:Connect(function()
-for tName, tabData in pairs(Tabs) do
-if tName == name then
-if not tabData.Page.Visible then
-tabData.Page.Position = UDim2.new(-1, 0, 0, 0)
-tabData.Page.Visible = true
-TweenService:Create(tabData.Page, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
-end
-tabData.Button.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
-tabData.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-else
-tabData.Page.Visible = false
-tabData.Button.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-tabData.Button.TextColor3 = Color3.fromRGB(200, 200, 200)
-end
-end
+    for tName, tabData in pairs(Tabs) do
+        if tName == name then
+            if not tabData.Page.Visible then
+                tabData.Page.Position = UDim2.new(-1, 0, 0, 0)
+                tabData.Page.Visible = true
+                TweenService:Create(tabData.Page, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+            end
+            
+            if UserTierValue == 2 then
+                -- PRO İÇİN PARLAYAN YAZI EFEKTİ (Arka plan şeffaf, Yazı gradient)
+                tabData.Button.BackgroundTransparency = 1
+                if tabData.Button:FindFirstChild("TabWaveGradient") then
+                    tabData.Button.TabWaveGradient.Enabled = true
+                end
+            else
+                tabData.Button.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+                tabData.Button.BackgroundTransparency = 0
+                tabData.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+            end
+        else
+            tabData.Page.Visible = false
+            if UserTierValue == 2 then
+                -- PRO İÇİN PASİF DURUM
+                tabData.Button.BackgroundTransparency = 1
+                if tabData.Button:FindFirstChild("TabWaveGradient") then
+                    tabData.Button.TabWaveGradient.Enabled = false
+                end
+                tabData.Button.TextColor3 = Color3.fromRGB(150, 150, 160)
+            else
+                tabData.Button.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+                tabData.Button.BackgroundTransparency = 0
+                tabData.Button.TextColor3 = Color3.fromRGB(200, 200, 200)
+            end
+        end
+    end
 end)
 
 if isDefault then
-TabBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
-TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+    TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 end
 
 return TabPage
@@ -820,22 +840,28 @@ QCGrid.CellPadding = UDim2.new(0.04, 0, 0, 8)
 QCGrid.SortOrder = Enum.SortOrder.LayoutOrder
 QCGrid.Parent = QCGridContainer
 
-local function CreateQCToggle(name)
-    local F = Instance.new("Frame")
+local function CreateQCToggle(name, callback)
+    local F = Instance.new("TextButton") -- Tıklanabilir alan
     F.BackgroundColor3 = Color3.fromRGB(15, 12, 25)
+    F.Text = ""
+    F.AutoButtonColor = false
     Instance.new("UICorner", F).CornerRadius = UDim.new(0, 6)
     F.Parent = QCGridContainer
     
     local T = Instance.new("TextLabel")
-    T.Size = UDim2.new(0.7, 0, 1, 0)
+    T.Size = UDim2.new(0.65, 0, 1, 0)
     T.Position = UDim2.new(0, 10, 0, 0)
     T.BackgroundTransparency = 1
     T.Text = name
     T.Font = Enum.Font.Gotham
     T.TextColor3 = Color3.fromRGB(200, 200, 200)
-    T.TextSize = 11
+    T.TextScaled = true -- Taşmayı Engeller (Responsive)
     T.TextXAlignment = Enum.TextXAlignment.Left
     T.Parent = F
+    
+    local UIPadding = Instance.new("UIPadding", T)
+    UIPadding.PaddingTop = UDim.new(0, 8)
+    UIPadding.PaddingBottom = UDim.new(0, 8)
 
     local Btn = Instance.new("Frame")
     Btn.Size = UDim2.new(0, 30, 0, 15)
@@ -850,15 +876,73 @@ local function CreateQCToggle(name)
     Circ.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
     Instance.new("UICorner", Circ).CornerRadius = UDim.new(1, 0)
     Circ.Parent = Btn
+    
+    local toggled = false
+    F.MouseButton1Click:Connect(function()
+        toggled = not toggled
+        if toggled then
+            TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(75, 40, 150)}):Play()
+            TweenService:Create(Circ, TweenInfo.new(0.2), {Position = UDim2.new(1, -13, 0, 2), BackgroundColor3 = Color3.fromRGB(255,255,255)}):Play()
+        else
+            TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 55)}):Play()
+            TweenService:Create(Circ, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0, 2), BackgroundColor3 = Color3.fromRGB(200,200,200)}):Play()
+        end
+        
+        -- DİNAMİK BİLDİRİM SİSTEMİ (TR/EN Destekli)
+        local stateStr = toggled and ((currentLang == "TR") and "Açık" or "Enabled") or ((currentLang == "TR") and "Kapalı" or "Disabled")
+        local localizedName = (currentLang == "TR") and (enToTr[name] or name) or name
+        Notify(localizedName .. ": " .. stateStr)
+        
+        if callback then pcall(function() callback(toggled) end) end
+    end)
 end
 
-CreateQCToggle("God Mode")
-CreateQCToggle("Infinite Jump")
-CreateQCToggle("Speed Hack")
-CreateQCToggle("Noclip")
-CreateQCToggle("Fly")
-CreateQCToggle("ESP")
+-- Çalışan Hızlı Butonlar (Quick Controls)
+CreateQCToggle("God Mode", function(state)
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if hum then hum.MaxHealth = state and math.huge or 100; hum.Health = state and math.huge or 100 end
+end)
 
+local InfJumpConn
+CreateQCToggle("Infinite Jump", function(state)
+    if state then
+        InfJumpConn = UserInputService.JumpRequest:Connect(function()
+            local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end)
+    else
+        if InfJumpConn then InfJumpConn:Disconnect() InfJumpConn = nil end
+    end
+end)
+
+CreateQCToggle("Speed Hack", function(state)
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if hum then hum.WalkSpeed = state and 50 or 16 end
+end)
+
+local QCNoclip
+CreateQCToggle("Noclip", function(state)
+    if state then
+        QCNoclip = RunService.Stepped:Connect(function()
+            if LocalPlayer.Character then
+                for _, p in pairs(LocalPlayer.Character:GetDescendants()) do
+                    if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end
+                end
+            end
+        end)
+    else
+        if QCNoclip then QCNoclip:Disconnect() QCNoclip = nil end
+    end
+end)
+
+CreateQCToggle("Fly", function(state)
+    Workspace.Gravity = state and 0 or 196.2 -- Pratik havada süzülme (Hızlı Uçuş)
+end)
+
+CreateQCToggle("ESP", function(state)
+    Toggles.PlayerESP = state
+    UpdateESP()
+end)
 local InfoFrame = Instance.new("Frame")
 InfoFrame.Size = UDim2.new(0.35, -5, 1, 0)
 InfoFrame.Position = UDim2.new(0.65, 10, 0, 0)
@@ -2426,7 +2510,25 @@ local trToEn = {
     ["Katile Işınlan"] = "Teleport to Murderer", ["Katilin tam arkasına ışınlanırsın."] = "Teleports right behind the murderer.",
     ["Şerife Işınlan"] = "Teleport to Sheriff", ["Şerifin tam arkasına ışınlanırsın."] = "Teleports right behind the sheriff.",
     ["Arayüz Boyutu"] = "UI Size", ["Menünün boyutunu ayarlar."] = "Adjusts the size of the menu.",
-    ["Crosshair Rengi"] = "Crosshair Color", ["Aimbot nişangahının rengini değiştirir."] = "Changes aimbot crosshair color."
+    ["Crosshair Rengi"] = "Crosshair Color", ["Aimbot nişangahının rengini değiştirir."] = "Changes aimbot crosshair color.",
+    -- PRO MENU EKLENTİLERİ
+    ["Welcome to DarkerSH"] = "DarkerSH'a Hoş Geldiniz",
+    ["Your all-in-one hub for dominating the game."] = "Oyunu domine etmeniz için hepsi bir arada merkeziniz.",
+    ["Powerful Features"] = "Güçlü Özellikler",
+    ["40+ built-in features to enhance your gameplay."] = "Oyununuzu geliştirmek için 40'tan fazla dahili özellik.",
+    ["Safe & Secure"] = "Güvenli ve Korumalı",
+    ["Designed with security in mind. Stay undetected."] = "Güvenlik düşünülerek tasarlandı. Tespit edilmeden kalın.",
+    ["Performance"] = "Performans",
+    ["Optimized for the best performance."] = "En iyi performans için optimize edildi.",
+    ["Customizable"] = "Özelleştirilebilir",
+    ["Customize the hub to your liking."] = "Merkezi zevkinize göre özelleştirin.",
+    ["⚡ Quick Controls"] = "⚡ Hızlı Kontroller",
+    ["ℹ️ Information"] = "ℹ️ Bilgi",
+    ["DarkerSH is constantly updated with new features and improvements.\n\nJoin our community for support and updates!"] = "DarkerSH sürekli olarak yeni özellikler ve iyileştirmelerle güncellenir.\n\nDestek ve güncellemeler için topluluğumuza katılın!",
+    ["God Mode"] = "Ölümsüzlük",
+    ["Infinite Jump"] = "Sınırsız Zıplama",
+    ["Speed Hack"] = "Hız Hilesi",
+    ["Join Discord"] = "Discord'a Katıl"
 }
 
 local enToTr = {}
@@ -2743,7 +2845,7 @@ IntroVerifyBtn.MouseButton1Click:Connect(function()
             ["Groq AI"] = "🤖", ["Ayarlar"] = "⚙️"
         }
         
-        for tName, tabData in pairs(Tabs) do
+for tName, tabData in pairs(Tabs) do
             tabData.Button.TextXAlignment = Enum.TextXAlignment.Left
             local pad = Instance.new("UIPadding", tabData.Button)
             pad.PaddingLeft = UDim.new(0, 35)
@@ -2757,18 +2859,43 @@ IntroVerifyBtn.MouseButton1Click:Connect(function()
             IconLbl.TextSize = 14
             IconLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
             IconLbl.Parent = tabData.Button
+
+            -- PARLAMA (WAVE) GRADIENTİ OLUŞTURULUYOR
+            local TabGrad = Instance.new("UIGradient")
+            TabGrad.Name = "TabWaveGradient"
+            TabGrad.Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 10, 60)), -- Siyah-Koyu Mor
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 32, 240)), -- Parlak Mor
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 10, 60))
+            }
+            TabGrad.Rotation = 0
+            TabGrad.Parent = tabData.Button
+            TabGrad.Enabled = false
+            
+            -- Sağa doğru akma animasyonu
+            task.spawn(function()
+                local offset = -1
+                while task.wait(0.01) do
+                    if TabGrad.Enabled then
+                        offset = offset + 0.02
+                        if offset > 1 then offset = -1 end
+                        TabGrad.Offset = Vector2.new(offset, 0)
+                    end
+                end
+            end)
             
             if tabData.Page.Visible then
-                tabData.Button.BackgroundColor3 = Color3.fromRGB(75, 40, 150)
-                tabData.Button.BackgroundTransparency = 0
+                tabData.Button.BackgroundTransparency = 1
+                TabGrad.Enabled = true
             else
                 tabData.Button.BackgroundTransparency = 1
+                TabGrad.Enabled = false
                 tabData.Button.TextColor3 = Color3.fromRGB(150, 150, 160)
                 IconLbl.TextColor3 = Color3.fromRGB(150, 150, 160)
             end
             
-            tabData.Button:GetPropertyChangedSignal("BackgroundTransparency"):Connect(function()
-                if tabData.Button.BackgroundTransparency == 0 then
+            tabData.Button:GetPropertyChangedSignal("TextColor3"):Connect(function()
+                if tabData.Button.TextColor3 == Color3.fromRGB(255, 255, 255) then
                     IconLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
                 else
                     IconLbl.TextColor3 = Color3.fromRGB(150, 150, 160)
@@ -2776,11 +2903,6 @@ IntroVerifyBtn.MouseButton1Click:Connect(function()
             end)
         end
         
-        LogoImage.Size = UDim2.new(0, 25, 0, 25)
-        LogoImage.Position = UDim2.new(0, 15, 0, 20)
-        Title.Size = UDim2.new(0, 100, 0, 20)
-        Title.Position = UDim2.new(0, 50, 0, 22)
-        Title.TextXAlignment = Enum.TextXAlignment.Left
         Title.Text = "DarkerSH"
         
         ProfileFrame.Visible = false
