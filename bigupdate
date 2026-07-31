@@ -1102,20 +1102,20 @@ local FloatingWidgets = {}
 local FeatureElements = {} 
 
 local function CreateCategoryCard(parentTab, titleText, iconId)
-    iconId = iconId or "rbxassetid://6031093848" -- İkon girilmezse varsayılan ikon
+    iconId = iconId or "rbxassetid://6031093848"
 
     local CardFrame = Instance.new("Frame")
-    CardFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 22) -- Midnight Hub Koyu Mor/Siyah
+    CardFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 22)
     CardFrame.ZIndex = 3
     CardFrame.Parent = parentTab
     Instance.new("UICorner", CardFrame).CornerRadius = UDim.new(0, 8)
 
-    -- Kartların etrafına da o havalı animasyonlu çizgiyi ekliyoruz
     ApplyAnimatedStroke(CardFrame, 1)
 
     local TopBar = Instance.new("Frame")
     TopBar.Size = UDim2.new(1, 0, 0, 35)
     TopBar.BackgroundTransparency = 1
+    TopBar.ZIndex = 5
     TopBar.Parent = CardFrame
 
     local Icon = Instance.new("ImageLabel")
@@ -1124,6 +1124,7 @@ local function CreateCategoryCard(parentTab, titleText, iconId)
     Icon.BackgroundTransparency = 1
     Icon.Image = iconId
     Icon.ImageColor3 = Color3.fromRGB(138, 43, 226)
+    Icon.ZIndex = 20 
     Icon.Parent = TopBar
 
     local TitleLbl = Instance.new("TextLabel")
@@ -1135,7 +1136,7 @@ local function CreateCategoryCard(parentTab, titleText, iconId)
     TitleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
     TitleLbl.TextSize = 13
     TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
-    TitleLbl.ZIndex = 4
+    TitleLbl.ZIndex = 20 
     TitleLbl.Parent = TopBar
 
     local Divider = Instance.new("Frame")
@@ -1143,6 +1144,7 @@ local function CreateCategoryCard(parentTab, titleText, iconId)
     Divider.Position = UDim2.new(0, 12, 0, 35)
     Divider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Divider.BackgroundTransparency = 0.9
+    Divider.ZIndex = 10
     Divider.Parent = CardFrame
 
     local ItemContainer = Instance.new("ScrollingFrame")
@@ -1151,12 +1153,12 @@ local function CreateCategoryCard(parentTab, titleText, iconId)
     ItemContainer.BackgroundTransparency = 1
     ItemContainer.BorderSizePixel = 0
     ItemContainer.ScrollBarThickness = 2
-    ItemContainer.ZIndex = 4
+    ItemContainer.ZIndex = 20 
     ItemContainer.Parent = CardFrame
 
     local ListLayout = Instance.new("UIListLayout")
     ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    ListLayout.Padding = UDim.new(0, 4) -- Butonlar arası boşluk (Temiz görünüm)
+    ListLayout.Padding = UDim.new(0, 4) 
     ListLayout.Parent = ItemContainer
 
     ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -1173,7 +1175,7 @@ local function CreateQuickWidget(name, toggleCallback)
     Widget.Size = UDim2.new(0, 120, 0, 40)
     Widget.Position = UDim2.new(0.8, 0, 0.5, 0)
     Widget.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    Widget.ZIndex = 1000 -- ZIndex düzeltildi
+    Widget.ZIndex = 1000 
     Widget.Active = true
     Widget.Parent = ScreenGui
     Instance.new("UICorner", Widget).CornerRadius = UDim.new(0, 8)
@@ -1270,23 +1272,23 @@ local function CreateToggle(parentContainer, name, description, minTier, callbac
     RowFrame.Size = UDim2.new(1, -10, 0, 42)
     RowFrame.Position = UDim2.new(0, 5, 0, 0)
     RowFrame.BackgroundColor3 = Color3.fromRGB(20, 16, 30)
-    RowFrame.BackgroundTransparency = 1 -- Arka plan şeffaf, Midnight Hub stili
-    RowFrame.ZIndex = 4
+    RowFrame.BackgroundTransparency = 1 
+    RowFrame.ZIndex = 15
     RowFrame.Parent = parentContainer
 
     local ClickArea = Instance.new("TextButton")
     ClickArea.Size = UDim2.new(1, 0, 1, 0)
     ClickArea.BackgroundTransparency = 1
     ClickArea.Text = ""
-    ClickArea.ZIndex = 15 
+    ClickArea.ZIndex = 30 
     ClickArea.Parent = RowFrame
 
-    -- Kaba yetki yazısı yerine şık küçük nokta (Tier Indicator)
     local TierColor = (minTier == 2 and Color3.fromRGB(138, 43, 226)) or (minTier == 1 and Color3.fromRGB(50, 150, 255)) or Color3.fromRGB(100, 255, 100)
     local TierDot = Instance.new("Frame")
     TierDot.Size = UDim2.new(0, 6, 0, 6)
     TierDot.Position = UDim2.new(0, 10, 0, 10)
     TierDot.BackgroundColor3 = TierColor
+    TierDot.ZIndex = 20
     Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
     TierDot.Parent = RowFrame
 
@@ -1300,6 +1302,7 @@ local function CreateToggle(parentContainer, name, description, minTier, callbac
     TitleLbl.TextColor3 = Color3.fromRGB(230, 230, 230)
     TitleLbl.TextSize = 12
     TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLbl.ZIndex = 20 
     TitleLbl.Parent = RowFrame
 
     local DescLbl = Instance.new("TextLabel")
@@ -1313,13 +1316,14 @@ local function CreateToggle(parentContainer, name, description, minTier, callbac
     DescLbl.TextSize = 10
     DescLbl.TextXAlignment = Enum.TextXAlignment.Left
     DescLbl.TextTruncate = Enum.TextTruncate.AtEnd
+    DescLbl.ZIndex = 20 
     DescLbl.Parent = RowFrame
 
     local ToggleBtn = Instance.new("Frame")
     ToggleBtn.Size = UDim2.new(0, 34, 0, 18)
     ToggleBtn.Position = UDim2.new(1, -40, 0.5, -9)
     ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 25, 40)
-    ToggleBtn.ZIndex = 5
+    ToggleBtn.ZIndex = 20 
     Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
     ToggleBtn.Parent = RowFrame
 
@@ -1327,7 +1331,7 @@ local function CreateToggle(parentContainer, name, description, minTier, callbac
     Circle.Size = UDim2.new(0, 14, 0, 14)
     Circle.Position = UDim2.new(0, 2, 0, 2)
     Circle.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-    Circle.ZIndex = 6
+    Circle.ZIndex = 21 
     Instance.new("UICorner", Circle).CornerRadius = UDim.new(1, 0)
     Circle.Parent = ToggleBtn
 
@@ -1361,6 +1365,93 @@ local function CreateToggle(parentContainer, name, description, minTier, callbac
     ClickArea.MouseButton1Up:Connect(function() isPressed = false; if not longPressFired then FireToggle() end end)
     ClickArea.MouseLeave:Connect(function() isPressed = false end)
     
+    table.insert(FeatureElements, {UI = RowFrame, Tier = minTier})
+end
+
+local function CreateButton(parentContainer, name, description, minTier, defaultText, callback)
+    local RowFrame = Instance.new("Frame")
+    RowFrame.Size = UDim2.new(1, -10, 0, 42)
+    RowFrame.Position = UDim2.new(0, 5, 0, 0)
+    RowFrame.BackgroundColor3 = Color3.fromRGB(20, 16, 30)
+    RowFrame.BackgroundTransparency = 1 
+    RowFrame.ZIndex = 15
+    RowFrame.Parent = parentContainer
+
+    local ClickArea = Instance.new("TextButton")
+    ClickArea.Size = UDim2.new(1, 0, 1, 0)
+    ClickArea.BackgroundTransparency = 1
+    ClickArea.Text = ""
+    ClickArea.ZIndex = 30 
+    ClickArea.Parent = RowFrame
+
+    local TierColor = (minTier == 2 and Color3.fromRGB(138, 43, 226)) or (minTier == 1 and Color3.fromRGB(50, 150, 255)) or Color3.fromRGB(100, 255, 100)
+    local TierDot = Instance.new("Frame")
+    TierDot.Size = UDim2.new(0, 6, 0, 6)
+    TierDot.Position = UDim2.new(0, 10, 0, 10)
+    TierDot.BackgroundColor3 = TierColor
+    TierDot.ZIndex = 20
+    Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
+    TierDot.Parent = RowFrame
+
+    local TitleLbl = Instance.new("TextLabel")
+    TitleLbl.Name = "TitleLbl"
+    TitleLbl.Size = UDim2.new(1, -100, 0, 16)
+    TitleLbl.Position = UDim2.new(0, 22, 0, 5)
+    TitleLbl.BackgroundTransparency = 1
+    TitleLbl.Text = name
+    TitleLbl.Font = Enum.Font.GothamMedium
+    TitleLbl.TextColor3 = Color3.fromRGB(230, 230, 230)
+    TitleLbl.TextSize = 12
+    TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLbl.ZIndex = 20 
+    TitleLbl.Parent = RowFrame
+
+    local DescLbl = Instance.new("TextLabel")
+    DescLbl.Name = "DescLbl"
+    DescLbl.Size = UDim2.new(1, -100, 0, 14)
+    DescLbl.Position = UDim2.new(0, 22, 0, 22)
+    DescLbl.BackgroundTransparency = 1
+    DescLbl.Text = description
+    DescLbl.Font = Enum.Font.Gotham
+    DescLbl.TextColor3 = Color3.fromRGB(140, 140, 150)
+    DescLbl.TextSize = 10
+    DescLbl.TextXAlignment = Enum.TextXAlignment.Left
+    DescLbl.TextTruncate = Enum.TextTruncate.AtEnd
+    DescLbl.ZIndex = 20 
+    DescLbl.Parent = RowFrame
+
+    local ActionBtnFrame = Instance.new("Frame")
+    ActionBtnFrame.Size = UDim2.new(0, 70, 0, 22)
+    ActionBtnFrame.Position = UDim2.new(1, -80, 0.5, -11)
+    ActionBtnFrame.BackgroundColor3 = Color3.fromRGB(35, 25, 50)
+    ActionBtnFrame.ZIndex = 20
+    Instance.new("UICorner", ActionBtnFrame).CornerRadius = UDim.new(0, 6)
+    ActionBtnFrame.Parent = RowFrame
+
+    local ActionStroke = Instance.new("UIStroke")
+    ActionStroke.Color = Color3.fromRGB(138, 43, 226)
+    ActionStroke.Thickness = 1
+    ActionStroke.Parent = ActionBtnFrame
+
+    local ActionTxt = Instance.new("TextLabel")
+    ActionTxt.Size = UDim2.new(1, 0, 1, 0)
+    ActionTxt.BackgroundTransparency = 1
+    ActionTxt.Text = defaultText
+    ActionTxt.Font = Enum.Font.GothamBold
+    ActionTxt.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ActionTxt.TextSize = 10
+    ActionTxt.ZIndex = 21 
+    ActionTxt.Parent = ActionBtnFrame
+
+    ClickArea.MouseButton1Click:Connect(function()
+        if UserTierValue < 0 then Notify("Önce Key giriniz!"); return end
+        if UserTierValue < minTier then Notify("Bu özellik " .. (minTier == 1 and "LITE" or "PRO") .. " gerektirir!"); return end
+
+        TweenService:Create(ActionBtnFrame, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(138, 43, 226)}):Play()
+        task.wait(0.1)
+        TweenService:Create(ActionBtnFrame, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(35, 25, 50)}):Play()
+        pcall(function() callback(ActionTxt) end)
+    end)
     table.insert(FeatureElements, {UI = RowFrame, Tier = minTier})
 end
 local function CreateSlider(parentContainer, name, minTier, minVal, maxVal, defaultVal, callback)
