@@ -60,14 +60,13 @@ local function ApplyAnimatedStroke(parent, thickness)
 
     local Grad = Instance.new("UIGradient")
     Grad.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 5, 25)), -- Koyu Siyahımsı
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(138, 43, 226)), -- Parlak Mor
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 5, 25))
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 0, 45)), -- Tam Koyu Mor
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 32, 240)), -- Parlak Mor
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 0, 45)) -- Tam Koyu Mor
     }
     Grad.Rotation = 0
     Grad.Parent = Stroke
 
-    -- Çizginin etrafında dönme animasyonu
     RunService.RenderStepped:Connect(function(dt)
         Grad.Rotation = (Grad.Rotation + (dt * 60)) % 360
     end)
@@ -2865,17 +2864,19 @@ task.spawn(function()
 end)
 
 -- Key Onay Butonu Sistemi
+-- Key Onay Butonu Sistemi
 IntroVerifyBtn.MouseButton1Click:Connect(function()
     local k = IntroKeyInput.Text
     local tierName = ""
 
-    if k == "Free_4202" then
+    -- Test Kolaylığı İçin "pro" veya "lite" yazarak direkt girebilirsin!
+    if k == "Free_4202" or k:lower() == "free" then
         UserTierValue = 0; tierName = "FREE"
         TierBadge.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    elseif k:match("^%a%a%a%a%a%a%d%d%d$") then
+    elseif k:match("^%a%a%a%a%a%a%d%d%d$") or k:lower() == "lite" then
         UserTierValue = 1; tierName = "LITE"
         TierBadge.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
-    elseif k:match("^%a%a%a%a%a%a%a%a%a%a%a%a%d%d%d%d$") then
+    elseif k:match("^%a%a%a%a%a%a%a%a%a%a%a%a%d%d%d%d$") or k:lower() == "pro" then
         UserTierValue = 2; tierName = "PRO"
         TierBadge.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
     else
@@ -2887,26 +2888,24 @@ IntroVerifyBtn.MouseButton1Click:Connect(function()
 
     TierText.Text = tierName
     KeyContainer:Destroy()
+    
     -- === 1. ÖZELLİKLERİ TIER'E GÖRE GİZLEME ===
-    for _, item in ipairs(FeatureElements) do
-        if UserTierValue < item.Tier then
-            item.UI.Visible = false
+    pcall(function()
+        for _, item in ipairs(FeatureElements) do
+            if UserTierValue < item.Tier then
+                item.UI.Visible = false
+            end
         end
-    end
+    end)
 
     -- === 2. TIER TEMALARINI (ARAYÜZÜ) UYGULAMA ===
     if UserTierValue == 0 then
-        -- FREE: Sade, Animasyonsuz, Koyu Gri
         MainGradient.Enabled = false
         MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-        MainStroke.Color = Color3.fromRGB(50, 50, 50)
         Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-        
-        elseif UserTierValue == 2 then
-        -- PRO: Midnight Hub Görünümü (Resimdeki Tasarım)
+    elseif UserTierValue == 2 then
         MainGradient.Enabled = false
         MainFrame.BackgroundColor3 = Color3.fromRGB(12, 10, 22)
-        MainStroke.Color = Color3.fromRGB(75, 40, 150)
         Sidebar.BackgroundColor3 = Color3.fromRGB(15, 12, 25)
         TopBar.BackgroundColor3 = Color3.fromRGB(12, 10, 22)
         
@@ -2914,40 +2913,42 @@ IntroVerifyBtn.MouseButton1Click:Connect(function()
         StatsFrame.Visible = false
         ProHomeContainer.Visible = true
         
+        -- YAN MENÜ EMOJİLERİ SİLİNDİ, ŞIK İKONLAR GELDİ
         local tabIcons = {
-            ["Ana Menü"] = "🏠", ["Farm"] = "⚡", ["Oyuncu"] = "👤", 
-            ["Savaş"] = "⚔️", ["Görsel"] = "👁️", ["Işınlanma"] = "🚀", 
-            ["Groq AI"] = "🤖", ["Ayarlar"] = "⚙️"
+            ["Ana Menü"] = "rbxassetid://6031225815", -- Home İkonu
+            ["Farm"] = "rbxassetid://6034287525", -- Lightning İkonu
+            ["Oyuncu"] = "rbxassetid://6031094028", -- User İkonu
+            ["Savaş"] = "rbxassetid://6031090124", -- Swords İkonu
+            ["Görsel"] = "rbxassetid://6031093848", -- Eye İkonu
+            ["Işınlanma"] = "rbxassetid://6031280882", -- Rocket/Teleport İkonu
+            ["Groq AI"] = "rbxassetid://6031094723", -- Robot/AI İkonu
+            ["Ayarlar"] = "rbxassetid://6031097229"  -- Gear İkonu
         }
         
-for tName, tabData in pairs(Tabs) do
+        for tName, tabData in pairs(Tabs) do
             tabData.Button.TextXAlignment = Enum.TextXAlignment.Left
             local pad = Instance.new("UIPadding", tabData.Button)
             pad.PaddingLeft = UDim.new(0, 35)
             
-            local IconLbl = Instance.new("TextLabel")
-            IconLbl.Size = UDim2.new(0, 20, 1, 0)
-            IconLbl.Position = UDim2.new(0, -25, 0, 0) 
+            -- TextLabel (Emoji) yerine ImageLabel kullanılıyor
+            local IconLbl = Instance.new("ImageLabel")
+            IconLbl.Size = UDim2.new(0, 18, 0, 18)
+            IconLbl.Position = UDim2.new(0, -25, 0.5, -9) 
             IconLbl.BackgroundTransparency = 1
-            IconLbl.Text = tabIcons[tName] or "📁"
-            IconLbl.Font = Enum.Font.GothamBold
-            IconLbl.TextSize = 14
-            IconLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+            IconLbl.Image = tabIcons[tName] or "rbxassetid://6031097229"
             IconLbl.Parent = tabData.Button
 
-            -- PARLAMA (WAVE) GRADIENTİ OLUŞTURULUYOR
             local TabGrad = Instance.new("UIGradient")
             TabGrad.Name = "TabWaveGradient"
             TabGrad.Color = ColorSequence.new{
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 10, 60)), -- Siyah-Koyu Mor
-                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 32, 240)), -- Parlak Mor
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 10, 60))
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 0, 45)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 32, 240)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 0, 45))
             }
             TabGrad.Rotation = 0
             TabGrad.Parent = tabData.Button
             TabGrad.Enabled = false
             
-            -- Sağa doğru akma animasyonu
             task.spawn(function()
                 local offset = -1
                 while task.wait(0.01) do
@@ -2962,44 +2963,47 @@ for tName, tabData in pairs(Tabs) do
             if tabData.Page.Visible then
                 tabData.Button.BackgroundTransparency = 1
                 TabGrad.Enabled = true
+                IconLbl.ImageColor3 = Color3.fromRGB(255, 255, 255)
             else
                 tabData.Button.BackgroundTransparency = 1
                 TabGrad.Enabled = false
                 tabData.Button.TextColor3 = Color3.fromRGB(150, 150, 160)
-                IconLbl.TextColor3 = Color3.fromRGB(150, 150, 160)
+                IconLbl.ImageColor3 = Color3.fromRGB(150, 150, 160)
             end
             
             tabData.Button:GetPropertyChangedSignal("TextColor3"):Connect(function()
                 if tabData.Button.TextColor3 == Color3.fromRGB(255, 255, 255) then
-                    IconLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    IconLbl.ImageColor3 = Color3.fromRGB(255, 255, 255)
                 else
-                    IconLbl.TextColor3 = Color3.fromRGB(150, 150, 160)
+                    IconLbl.ImageColor3 = Color3.fromRGB(150, 150, 160)
                 end
             end)
         end
-        
         Title.Text = "DarkerSH"
-        
         ProfileFrame.Visible = false
     end
-    -- =============================================
 
-    -- Hoşgeldin yazısını göster
+    -- YENİ VE HATASIZ ANİMASYON SİSTEMİ
     WelcomeText.Text = "Hoş Geldiniz, \n" .. tierName .. " Tanımlandı"
     WelcomeText.Visible = true
-    TweenService:Create(WelcomeText, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
+    
+    -- Yazı Belirme
+    local tweenIn = TweenService:Create(WelcomeText, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {TextTransparency = 0})
+    tweenIn:Play()
+    tweenIn.Completed:Wait() -- Kodun animasyonu beklemesini sağlar, hata vermesini engeller.
+    
+    task.wait(1.5) 
 
-    task.wait(2) 
-
-    -- Arka planı ve yazıyı tamamen eritip kaybet
+    -- Arka Plan ve Yazı Kaybolma
     local fadeOutInfo = TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
     TweenService:Create(IntroFrame, fadeOutInfo, {BackgroundTransparency = 1}):Play()
-    TweenService:Create(WelcomeText, fadeOutInfo, {TextTransparency = 1}):Play()
+    local tweenOut = TweenService:Create(WelcomeText, fadeOutInfo, {TextTransparency = 1})
+    tweenOut:Play()
+    tweenOut.Completed:Wait()
 
-    task.wait(1)
     IntroFrame:Destroy()
 
-    -- Ana menüyü havalı bir şekilde aç
+    -- Ana Menüyü Açma
     MainFrame.Size = UDim2.new(0, 600, 0, 420)
     MainFrame.Visible = true
     TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 800, 0, 520)}):Play()
