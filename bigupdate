@@ -1363,7 +1363,173 @@ local function CreateToggle(parentContainer, name, description, minTier, callbac
     
     table.insert(FeatureElements, {UI = RowFrame, Tier = minTier})
 end
+local function CreateSlider(parentContainer, name, minTier, minVal, maxVal, defaultVal, callback)
+    local RowFrame = Instance.new("Frame")
+    RowFrame.Size = UDim2.new(1, -10, 0, 42)
+    RowFrame.Position = UDim2.new(0, 5, 0, 0)
+    RowFrame.BackgroundTransparency = 1 
+    RowFrame.ZIndex = 4
+    RowFrame.Parent = parentContainer
 
+    local TierColor = (minTier == 2 and Color3.fromRGB(138, 43, 226)) or (minTier == 1 and Color3.fromRGB(50, 150, 255)) or Color3.fromRGB(100, 255, 100)
+    local TierDot = Instance.new("Frame")
+    TierDot.Size = UDim2.new(0, 6, 0, 6)
+    TierDot.Position = UDim2.new(0, 10, 0, 10)
+    TierDot.BackgroundColor3 = TierColor
+    Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
+    TierDot.Parent = RowFrame
+
+    local TitleLbl = Instance.new("TextLabel")
+    TitleLbl.Size = UDim2.new(1, -150, 0, 16)
+    TitleLbl.Position = UDim2.new(0, 22, 0, 5)
+    TitleLbl.BackgroundTransparency = 1
+    TitleLbl.Text = name
+    TitleLbl.Font = Enum.Font.GothamMedium
+    TitleLbl.TextColor3 = Color3.fromRGB(230, 230, 230)
+    TitleLbl.TextSize = 12
+    TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLbl.Parent = RowFrame
+
+    local ValLbl = Instance.new("TextLabel")
+    ValLbl.Size = UDim2.new(0, 40, 0, 16)
+    ValLbl.Position = UDim2.new(1, -150, 0, 5)
+    ValLbl.BackgroundTransparency = 1
+    ValLbl.Text = tostring(defaultVal)
+    ValLbl.Font = Enum.Font.Gotham
+    ValLbl.TextColor3 = Color3.fromRGB(138, 43, 226)
+    ValLbl.TextSize = 10
+    ValLbl.TextXAlignment = Enum.TextXAlignment.Right
+    ValLbl.Parent = RowFrame
+
+    local SliderBg = Instance.new("Frame")
+    SliderBg.Size = UDim2.new(0, 100, 0, 4)
+    SliderBg.Position = UDim2.new(1, -105, 0, 11)
+    SliderBg.BackgroundColor3 = Color3.fromRGB(35, 25, 50)
+    Instance.new("UICorner", SliderBg).CornerRadius = UDim.new(1, 0)
+    SliderBg.Parent = RowFrame
+
+    local SliderFill = Instance.new("Frame")
+    local fillRatio = (defaultVal - minVal) / (maxVal - minVal)
+    SliderFill.Size = UDim2.new(fillRatio, 0, 1, 0)
+    SliderFill.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+    Instance.new("UICorner", SliderFill).CornerRadius = UDim.new(1, 0)
+    SliderFill.Parent = SliderBg
+
+    local Knob = Instance.new("Frame")
+    Knob.Size = UDim2.new(0, 10, 0, 10)
+    Knob.Position = UDim2.new(1, -5, 0.5, -5)
+    Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+    Knob.Parent = SliderFill
+
+    local ClickBtn = Instance.new("TextButton")
+    ClickBtn.Size = UDim2.new(1, 0, 5, 0)
+    ClickBtn.Position = UDim2.new(0, 0, -2, 0) 
+    ClickBtn.BackgroundTransparency = 1
+    ClickBtn.Text = ""
+    ClickBtn.ZIndex = 10
+    ClickBtn.Parent = SliderBg
+
+    local dragging = false
+    ClickBtn.MouseButton1Down:Connect(function()
+        if UserTierValue < minTier then Notify("Bu özellik yetki gerektirir!"); return end
+        dragging = true
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mouseX = input.Position.X
+            local relX = math.clamp((mouseX - SliderBg.AbsolutePosition.X) / SliderBg.AbsoluteSize.X, 0, 1)
+            SliderFill.Size = UDim2.new(relX, 0, 1, 0)
+            local val = math.floor(minVal + (maxVal - minVal) * relX)
+            ValLbl.Text = tostring(val)
+            pcall(function() callback(val) end)
+        end
+    end)
+    
+    table.insert(FeatureElements, {UI = RowFrame, Tier = minTier})
+end
+
+local function CreateDropdown(parentContainer, name, minTier, options, defaultIdx, callback)
+    local RowFrame = Instance.new("Frame")
+    RowFrame.Size = UDim2.new(1, -10, 0, 42)
+    RowFrame.Position = UDim2.new(0, 5, 0, 0)
+    RowFrame.BackgroundTransparency = 1 
+    RowFrame.ClipsDescendants = true
+    RowFrame.ZIndex = 4
+    RowFrame.Parent = parentContainer
+
+    local TierColor = (minTier == 2 and Color3.fromRGB(138, 43, 226)) or (minTier == 1 and Color3.fromRGB(50, 150, 255)) or Color3.fromRGB(100, 255, 100)
+    local TierDot = Instance.new("Frame")
+    TierDot.Size = UDim2.new(0, 6, 0, 6)
+    TierDot.Position = UDim2.new(0, 10, 0, 10)
+    TierDot.BackgroundColor3 = TierColor
+    Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
+    TierDot.Parent = RowFrame
+
+    local TitleLbl = Instance.new("TextLabel")
+    TitleLbl.Size = UDim2.new(1, -120, 0, 16)
+    TitleLbl.Position = UDim2.new(0, 22, 0, 5)
+    TitleLbl.BackgroundTransparency = 1
+    TitleLbl.Text = name
+    TitleLbl.Font = Enum.Font.GothamMedium
+    TitleLbl.TextColor3 = Color3.fromRGB(230, 230, 230)
+    TitleLbl.TextSize = 12
+    TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLbl.Parent = RowFrame
+
+    local MainBtn = Instance.new("TextButton")
+    MainBtn.Size = UDim2.new(0, 90, 0, 20)
+    MainBtn.Position = UDim2.new(1, -100, 0, 3)
+    MainBtn.BackgroundColor3 = Color3.fromRGB(35, 25, 50)
+    MainBtn.Text = options[defaultIdx] or "Seç"
+    MainBtn.Font = Enum.Font.Gotham
+    MainBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    MainBtn.TextSize = 10
+    MainBtn.ZIndex = 5
+    Instance.new("UICorner", MainBtn).CornerRadius = UDim.new(0, 4)
+    MainBtn.Parent = RowFrame
+    
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Color3.fromRGB(138, 43, 226)
+    UIStroke.Thickness = 1
+    UIStroke.Parent = MainBtn
+
+    local isDropOpen = false
+    MainBtn.MouseButton1Click:Connect(function()
+        if UserTierValue < minTier then Notify("Bu özellik yetki gerektirir!"); return end
+        isDropOpen = not isDropOpen
+        if isDropOpen then
+            TweenService:Create(RowFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 42 + (#options * 22))}):Play()
+        else
+            TweenService:Create(RowFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 42)}):Play()
+        end
+    end)
+
+    for i, opt in ipairs(options) do
+        local OptBtn = Instance.new("TextButton")
+        OptBtn.Size = UDim2.new(0, 90, 0, 20)
+        OptBtn.Position = UDim2.new(1, -100, 0, 25 + ((i-1)*22))
+        OptBtn.BackgroundColor3 = Color3.fromRGB(25, 15, 40)
+        OptBtn.Text = opt
+        OptBtn.Font = Enum.Font.Gotham
+        OptBtn.TextColor3 = Color3.fromRGB(150, 150, 160)
+        OptBtn.TextSize = 10
+        OptBtn.ZIndex = 5
+        Instance.new("UICorner", OptBtn).CornerRadius = UDim.new(0, 4)
+        OptBtn.Parent = RowFrame
+
+        OptBtn.MouseButton1Click:Connect(function()
+            MainBtn.Text = opt
+            isDropOpen = false
+            TweenService:Create(RowFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 42)}):Play()
+            pcall(function() callback(opt) end)
+        end)
+    end
+    table.insert(FeatureElements, {UI = RowFrame, Tier = minTier})
+end
 local function CreateButton(parentContainer, name, description, minTier, defaultText, callback)
     local RowFrame = Instance.new("Frame")
     RowFrame.Size = UDim2.new(1, -10, 0, 42)
@@ -1541,7 +1707,7 @@ end
 local Toggles = {AutoCoin = false, AutoGun = false, AutoKill = false, AntiAFK = false, SafeMode = false, PlayerESP = false, MurdererESP = false, SheriffESP = false, ShootMurderer = false}
 
 -- === FARM SEKMESİ ===
-local FarmCard = CreateCategoryCard(FarmTab, "Otomatik Kasılma (Farm)")
+local FarmCard = CreateCategoryCard(FarmTab, "Otomatik Kasılma (Farm)", "rbxassetid://6034287525")
 
 CreateToggle(FarmCard, "Akıllı Altın Topla", "En yakındakine uçar, buga girmez.", 1, function(state)
     Toggles.AutoCoin = state
@@ -1629,7 +1795,7 @@ end
 end)
 
 -- === SAVAŞ SEKMESİ ===
-local CombatCard = CreateCategoryCard(CombatTab, "Saldırı ve Savunma")
+local CombatCard = CreateCategoryCard(CombatTab, "Saldırı ve Savunma", "rbxassetid://6031090124")
 local savedPositions = {}
 
 CreateToggle(CombatCard, "Otomatik Katlet", "Herkesi önüne çeker ve katleder.", 2, function(state)
@@ -1788,9 +1954,8 @@ Notify("Hitboxlar normale döndü.")
 end
 end)
 -- === OYUNCU SEKMESİ ===
-local HareketCard = CreateCategoryCard(PlayerTab, "Hareket")
-local UtilityCard = CreateCategoryCard(PlayerTab, "Özel Güçler")
-
+local HareketCard = CreateCategoryCard(PlayerTab, "Hareket", "rbxassetid://6031094028")
+local UtilityCard = CreateCategoryCard(PlayerTab, "Özel Güçler", "rbxassetid://6031094670")
 local WalkSpeedGUI
 local CurrentSpeed = 50
 
@@ -2181,7 +2346,7 @@ end
 end)
 
 -- === GÖRSEL SEKMESİ (ESP) ===
-local VisualCard = CreateCategoryCard(VisualTab, "Oyuncu İzleme (ESP)")
+local VisualCard = CreateCategoryCard(VisualTab, "Oyuncu İzleme (ESP)", "rbxassetid://6031093848")
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "DarkerSH_ESP"
 ESPFolder.Parent = CoreGui
@@ -2297,8 +2462,7 @@ Toggles.SheriffESP = state
 UpdateESP()
 end)
 -- === IŞINLANMA (TELEPORT) SEKMESİ ===
-local TeleportCard = CreateCategoryCard(TeleportTab, "Hızlı Işınlanma")
-
+local TeleportCard = CreateCategoryCard(TeleportTab, "Hızlı Işınlanma", "rbxassetid://6031280882")
 -- Dinamik Harita Takip Sistemi (Aniden Işınlanma Algılayıcı)
 local dynamicMapPos = nil
 local lastPlayerPositions = {}
@@ -2630,8 +2794,7 @@ AISendBtn.MouseButton1Click:Connect(function()
     end
 end)
 -- === AYARLAR SEKMESİ ===
-local SettingsCard = CreateCategoryCard(SettingsTab, "Arayüz Ayarları (GUI)")
-
+local SettingsCard = CreateCategoryCard(SettingsTab, "Arayüz Ayarları (GUI)", "rbxassetid://6031097229")
 -- 1. ARAYÜZ BOYUTU
 local currentSizeState = 3
 CreateButton(SettingsCard, "Arayüz Boyutu", "Menünün boyutunu ayarlar.", 0, "NORMAL", function(btnTxt)
