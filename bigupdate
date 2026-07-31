@@ -1099,225 +1099,226 @@ CmdExec.Parent = CmdFrame
 -- KART VE WIDGET SİSTEMİ
 -- ==========================================
 local FloatingWidgets = {}
-local FeatureElements = {} -- YENİ: Özellikleri yetkiye göre gizlemek için kullanacağız
-                              
-local function CreateCategoryCard(parentTab, titleText)
-local CardFrame = Instance.new("Frame")
-CardFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-CardFrame.ZIndex = 3
-CardFrame.Parent = parentTab
-Instance.new("UICorner", CardFrame).CornerRadius = UDim.new(0, 8)
+local FeatureElements = {} 
 
-local CardGradient = Instance.new("UIGradient")
-CardGradient.Color = ColorSequence.new{
-ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 5, 40)),
-ColorSequenceKeypoint.new(0.5, Color3.fromRGB(60, 10, 90)),
-ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 5, 40))
-}
-CardGradient.Rotation = 45
-CardGradient.Parent = CardFrame
+local function CreateCategoryCard(parentTab, titleText, iconId)
+    iconId = iconId or "rbxassetid://6031093848" -- İkon girilmezse varsayılan ikon
 
-TweenService:Create(CardGradient, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.5, 0)}):Play()
+    local CardFrame = Instance.new("Frame")
+    CardFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 22) -- Midnight Hub Koyu Mor/Siyah
+    CardFrame.ZIndex = 3
+    CardFrame.Parent = parentTab
+    Instance.new("UICorner", CardFrame).CornerRadius = UDim.new(0, 8)
 
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(255, 255, 255)
-Stroke.Transparency = 0.7
-Stroke.Thickness = 1
-Stroke.Parent = CardFrame
+    -- Kartların etrafına da o havalı animasyonlu çizgiyi ekliyoruz
+    ApplyAnimatedStroke(CardFrame, 1)
 
-local TitleLbl = Instance.new("TextLabel")
-TitleLbl.Size = UDim2.new(1, -20, 0, 30)
-TitleLbl.Position = UDim2.new(0, 10, 0, 5)
-TitleLbl.BackgroundTransparency = 1
-TitleLbl.Text = string.upper(titleText)
-TitleLbl.Font = Enum.Font.GothamBlack
-TitleLbl.TextColor3 = Color3.fromRGB(138, 43, 226)
-TitleLbl.TextSize = 14
-TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
-TitleLbl.ZIndex = 4
-TitleLbl.Parent = CardFrame
+    local TopBar = Instance.new("Frame")
+    TopBar.Size = UDim2.new(1, 0, 0, 35)
+    TopBar.BackgroundTransparency = 1
+    TopBar.Parent = CardFrame
 
-local ItemContainer = Instance.new("ScrollingFrame")
-ItemContainer.Size = UDim2.new(1, -20, 1, -40)
-ItemContainer.Position = UDim2.new(0, 10, 0, 35)
-ItemContainer.BackgroundTransparency = 1
-ItemContainer.BorderSizePixel = 0
-ItemContainer.ScrollBarThickness = 2
-ItemContainer.ZIndex = 4
-ItemContainer.Parent = CardFrame
+    local Icon = Instance.new("ImageLabel")
+    Icon.Size = UDim2.new(0, 16, 0, 16)
+    Icon.Position = UDim2.new(0, 12, 0.5, -8)
+    Icon.BackgroundTransparency = 1
+    Icon.Image = iconId
+    Icon.ImageColor3 = Color3.fromRGB(138, 43, 226)
+    Icon.Parent = TopBar
 
-local ListLayout = Instance.new("UIListLayout")
-ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ListLayout.Padding = UDim.new(0, 8)
-ListLayout.Parent = ItemContainer
+    local TitleLbl = Instance.new("TextLabel")
+    TitleLbl.Size = UDim2.new(1, -40, 1, 0)
+    TitleLbl.Position = UDim2.new(0, 36, 0, 0)
+    TitleLbl.BackgroundTransparency = 1
+    TitleLbl.Text = titleText
+    TitleLbl.Font = Enum.Font.GothamBold
+    TitleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TitleLbl.TextSize = 13
+    TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLbl.ZIndex = 4
+    TitleLbl.Parent = TopBar
 
-ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-ItemContainer.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 10)
-end)
+    local Divider = Instance.new("Frame")
+    Divider.Size = UDim2.new(1, -24, 0, 1)
+    Divider.Position = UDim2.new(0, 12, 0, 35)
+    Divider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Divider.BackgroundTransparency = 0.9
+    Divider.Parent = CardFrame
 
-return ItemContainer
+    local ItemContainer = Instance.new("ScrollingFrame")
+    ItemContainer.Size = UDim2.new(1, -10, 1, -45)
+    ItemContainer.Position = UDim2.new(0, 5, 0, 40)
+    ItemContainer.BackgroundTransparency = 1
+    ItemContainer.BorderSizePixel = 0
+    ItemContainer.ScrollBarThickness = 2
+    ItemContainer.ZIndex = 4
+    ItemContainer.Parent = CardFrame
+
+    local ListLayout = Instance.new("UIListLayout")
+    ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ListLayout.Padding = UDim.new(0, 4) -- Butonlar arası boşluk (Temiz görünüm)
+    ListLayout.Parent = ItemContainer
+
+    ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        ItemContainer.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 10)
+    end)
+
+    return ItemContainer
 end
 
 local function CreateQuickWidget(name, toggleCallback)
-if FloatingWidgets[name] then return end
+    if FloatingWidgets[name] then return end
 
-local Widget = Instance.new("Frame")
-Widget.Size = UDim2.new(0, 120, 0, 40)
-Widget.Position = UDim2.new(0.8, 0, 0.5, 0)
-Widget.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-Widget.ZIndex = 100
-Widget.Active = true
-Widget.Parent = ScreenGui
-Instance.new("UICorner", Widget).CornerRadius = UDim.new(0, 8)
+    local Widget = Instance.new("Frame")
+    Widget.Size = UDim2.new(0, 120, 0, 40)
+    Widget.Position = UDim2.new(0.8, 0, 0.5, 0)
+    Widget.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    Widget.ZIndex = 1000 -- ZIndex düzeltildi
+    Widget.Active = true
+    Widget.Parent = ScreenGui
+    Instance.new("UICorner", Widget).CornerRadius = UDim.new(0, 8)
 
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(255, 255, 255)
-UIStroke.Transparency = 0.6
-UIStroke.Thickness = 1
-UIStroke.Parent = Widget
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Color3.fromRGB(255, 255, 255)
+    UIStroke.Transparency = 0.6
+    UIStroke.Thickness = 1
+    UIStroke.Parent = Widget
 
-local Btn = Instance.new("TextButton")
-Btn.Size = UDim2.new(1, 0, 1, 0)
-Btn.BackgroundTransparency = 1
-Btn.Text = name
-Btn.Font = Enum.Font.GothamBold
-Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-Btn.TextSize = 12
-Btn.TextWrapped = true
-Btn.ZIndex = 101
-Btn.Parent = Widget
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, 0, 1, 0)
+    Btn.BackgroundTransparency = 1
+    Btn.Text = name
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Btn.TextSize = 12
+    Btn.TextWrapped = true
+    Btn.ZIndex = 1001
+    Btn.Parent = Widget
 
-local LockBtn = Instance.new("TextButton")
-LockBtn.Size = UDim2.new(0, 25, 0, 25)
-LockBtn.Position = UDim2.new(1, -30, 0, -10)
-LockBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-LockBtn.Text = "🔓"
-LockBtn.ZIndex = 105
-LockBtn.Visible = false
-Instance.new("UICorner", LockBtn).CornerRadius = UDim.new(1, 0)
-LockBtn.Parent = Widget
+    local LockBtn = Instance.new("TextButton")
+    LockBtn.Size = UDim2.new(0, 25, 0, 25)
+    LockBtn.Position = UDim2.new(1, -30, 0, -10)
+    LockBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    LockBtn.Text = "🔓"
+    LockBtn.ZIndex = 1005
+    LockBtn.Visible = false
+    Instance.new("UICorner", LockBtn).CornerRadius = UDim.new(1, 0)
+    LockBtn.Parent = Widget
 
-local ResizeHandle = nil
-pcall(function() 
-ResizeHandle = MakeResizable(Widget, 100, 40)
-ResizeHandle.Visible = false 
-end)
+    local ResizeHandle = nil
+    pcall(function() 
+        ResizeHandle = MakeResizable(Widget, 100, 40)
+        ResizeHandle.Visible = false 
+    end)
 
-MakeDraggable(Widget, Btn)
-FloatingWidgets[name] = Widget
+    MakeDraggable(Widget, Btn)
+    FloatingWidgets[name] = Widget
 
-local isLocked = false
-local editMode = false
+    local isLocked = false
+    local editMode = false
 
-LockBtn.MouseButton1Click:Connect(function()
-isLocked = not isLocked
-LockBtn.Text = isLocked and "🔒" or "🔓"
-LockBtn.BackgroundColor3 = isLocked and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-Widget.Active = not isLocked
-Notify(name .. (isLocked and " Widget Kitlendi!" or " Widget Kilidi Açıldı!"))
-end)
+    LockBtn.MouseButton1Click:Connect(function()
+        isLocked = not isLocked
+        LockBtn.Text = isLocked and "🔒" or "🔓"
+        LockBtn.BackgroundColor3 = isLocked and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+        Widget.Active = not isLocked
+        Notify(name .. (isLocked and " Kitlendi!" or " Kilidi Açıldı!"))
+    end)
 
-local wIsPressed = false
-local wFired = false
-Btn.MouseButton1Down:Connect(function()
-if isLocked then return end
-wIsPressed = true; wFired = false
-task.delay(0.5, function()
-if wIsPressed and not wFired then
-wFired = true
-editMode = not editMode
-LockBtn.Visible = editMode
-if ResizeHandle then ResizeHandle.Visible = editMode end
+    local wIsPressed = false
+    local wFired = false
+    Btn.MouseButton1Down:Connect(function()
+        if isLocked then return end
+        wIsPressed = true; wFired = false
+        task.delay(0.5, function()
+            if wIsPressed and not wFired then
+                wFired = true
+                editMode = not editMode
+                LockBtn.Visible = editMode
+                if ResizeHandle then ResizeHandle.Visible = editMode end
 
-if editMode then
-TweenService:Create(Widget, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -Widget.AbsoluteSize.X/2, 0.5, -Widget.AbsoluteSize.Y/2)}):Play()
-UIStroke.Color = Color3.fromRGB(138, 43, 226)
-UIStroke.Transparency = 0
-Notify("Düzenleme Modu: Boyutu ayarlayabilir veya kitleyebilirsiniz.")
-else
-UIStroke.Color = Color3.fromRGB(255, 255, 255)
-UIStroke.Transparency = 0.6
-end
-end
-end)
-end)
+                if editMode then
+                    TweenService:Create(Widget, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -Widget.AbsoluteSize.X/2, 0.5, -Widget.AbsoluteSize.Y/2)}):Play()
+                    UIStroke.Color = Color3.fromRGB(138, 43, 226)
+                    UIStroke.Transparency = 0
+                    Notify("Düzenleme Modu Açık.")
+                else
+                    UIStroke.Color = Color3.fromRGB(255, 255, 255)
+                    UIStroke.Transparency = 0.6
+                end
+            end
+        end)
+    end)
 
-Btn.MouseButton1Up:Connect(function()
-wIsPressed = false
-if not wFired and not editMode then 
-toggleCallback()
-end
-end)
-Btn.MouseLeave:Connect(function() wIsPressed = false end)
+    Btn.MouseButton1Up:Connect(function()
+        wIsPressed = false
+        if not wFired and not editMode then toggleCallback() end
+    end)
+    Btn.MouseLeave:Connect(function() wIsPressed = false end)
 end
 
 local function RemoveQuickWidget(name)
-if FloatingWidgets[name] then
-FloatingWidgets[name]:Destroy()
-FloatingWidgets[name] = nil
-Notify(name .. " Hızlı Butonu Kaldırıldı.")
-end
+    if FloatingWidgets[name] then
+        FloatingWidgets[name]:Destroy()
+        FloatingWidgets[name] = nil
+        Notify(name .. " Hızlı Butonu Kaldırıldı.")
+    end
 end
 
 local function CreateToggle(parentContainer, name, description, minTier, callback)
     local RowFrame = Instance.new("Frame")
-    RowFrame.Size = UDim2.new(1, -5, 0, 45)
-    RowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    RowFrame.Size = UDim2.new(1, -10, 0, 42)
+    RowFrame.Position = UDim2.new(0, 5, 0, 0)
+    RowFrame.BackgroundColor3 = Color3.fromRGB(20, 16, 30)
+    RowFrame.BackgroundTransparency = 1 -- Arka plan şeffaf, Midnight Hub stili
     RowFrame.ZIndex = 4
     RowFrame.Parent = parentContainer
-    Instance.new("UICorner", RowFrame).CornerRadius = UDim.new(0, 6)
 
     local ClickArea = Instance.new("TextButton")
     ClickArea.Size = UDim2.new(1, 0, 1, 0)
     ClickArea.BackgroundTransparency = 1
     ClickArea.Text = ""
-    ClickArea.ZIndex = 15 -- Tıklama sorununu engeller
+    ClickArea.ZIndex = 15 
     ClickArea.Parent = RowFrame
 
-    local TierLbl = Instance.new("TextLabel")
-    TierLbl.Size = UDim2.new(0, 45, 0, 15)
-    TierLbl.Position = UDim2.new(0, 5, 0, 5)
-    TierLbl.BackgroundColor3 = (minTier == 2 and Color3.fromRGB(138, 43, 226)) or (minTier == 1 and Color3.fromRGB(50, 150, 255)) or Color3.fromRGB(100, 100, 100)
-    TierLbl.Text = (minTier == 2 and "PRO") or (minTier == 1 and "LITE") or "FREE"
-    TierLbl.Font = Enum.Font.GothamBold
-    TierLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TierLbl.TextSize = 8
-    TierLbl.ZIndex = 5
-    Instance.new("UICorner", TierLbl).CornerRadius = UDim.new(0, 4)
-    TierLbl.Parent = RowFrame
+    -- Kaba yetki yazısı yerine şık küçük nokta (Tier Indicator)
+    local TierColor = (minTier == 2 and Color3.fromRGB(138, 43, 226)) or (minTier == 1 and Color3.fromRGB(50, 150, 255)) or Color3.fromRGB(100, 255, 100)
+    local TierDot = Instance.new("Frame")
+    TierDot.Size = UDim2.new(0, 6, 0, 6)
+    TierDot.Position = UDim2.new(0, 10, 0, 10)
+    TierDot.BackgroundColor3 = TierColor
+    Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
+    TierDot.Parent = RowFrame
 
     local TitleLbl = Instance.new("TextLabel")
     TitleLbl.Name = "TitleLbl"
-    TitleLbl.Size = UDim2.new(1, -100, 0, 20)
-    TitleLbl.Position = UDim2.new(0, 55, 0, 3)
+    TitleLbl.Size = UDim2.new(1, -80, 0, 16)
+    TitleLbl.Position = UDim2.new(0, 22, 0, 5)
     TitleLbl.BackgroundTransparency = 1
     TitleLbl.Text = name
-    TitleLbl.Font = Enum.Font.GothamBold
-    TitleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TitleLbl.Font = Enum.Font.GothamMedium
+    TitleLbl.TextColor3 = Color3.fromRGB(230, 230, 230)
     TitleLbl.TextSize = 12
-    TitleLbl.TextWrapped = true
     TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
-    TitleLbl.ZIndex = 5
     TitleLbl.Parent = RowFrame
 
     local DescLbl = Instance.new("TextLabel")
     DescLbl.Name = "DescLbl"
-    DescLbl.Size = UDim2.new(1, -55, 0, 20)
-    DescLbl.Position = UDim2.new(0, 10, 0, 22)
+    DescLbl.Size = UDim2.new(1, -80, 0, 14)
+    DescLbl.Position = UDim2.new(0, 22, 0, 22)
     DescLbl.BackgroundTransparency = 1
     DescLbl.Text = description
     DescLbl.Font = Enum.Font.Gotham
-    DescLbl.TextColor3 = Color3.fromRGB(150, 150, 150)
+    DescLbl.TextColor3 = Color3.fromRGB(140, 140, 150)
     DescLbl.TextSize = 10
-    DescLbl.TextWrapped = true
     DescLbl.TextXAlignment = Enum.TextXAlignment.Left
-    DescLbl.ZIndex = 5
+    DescLbl.TextTruncate = Enum.TextTruncate.AtEnd
     DescLbl.Parent = RowFrame
 
     local ToggleBtn = Instance.new("Frame")
-    ToggleBtn.Size = UDim2.new(0, 36, 0, 18)
-    ToggleBtn.Position = UDim2.new(1, -45, 0.5, -9)
-    ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+    ToggleBtn.Size = UDim2.new(0, 34, 0, 18)
+    ToggleBtn.Position = UDim2.new(1, -40, 0.5, -9)
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 25, 40)
     ToggleBtn.ZIndex = 5
     Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
     ToggleBtn.Parent = RowFrame
@@ -1341,7 +1342,7 @@ local function CreateToggle(parentContainer, name, description, minTier, callbac
             TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(138, 43, 226)}):Play()
             TweenService:Create(Circle, TweenInfo.new(0.2), {Position = UDim2.new(1, -16, 0, 2), BackgroundColor3 = Color3.fromRGB(255,255,255)}):Play()
         else
-            TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 50)}):Play()
+            TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(30, 25, 40)}):Play()
             TweenService:Create(Circle, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0, 2), BackgroundColor3 = Color3.fromRGB(200,200,200)}):Play()
         end
         pcall(function() callback(toggled) end)
@@ -1357,10 +1358,94 @@ local function CreateToggle(parentContainer, name, description, minTier, callbac
             end
         end)
     end)
-   ClickArea.MouseButton1Up:Connect(function() isPressed = false; if not longPressFired then FireToggle() end end)
+    ClickArea.MouseButton1Up:Connect(function() isPressed = false; if not longPressFired then FireToggle() end end)
     ClickArea.MouseLeave:Connect(function() isPressed = false end)
     
-    table.insert(FeatureElements, {UI = RowFrame, Tier = minTier}) -- YENİ EKLENDİ
+    table.insert(FeatureElements, {UI = RowFrame, Tier = minTier})
+end
+
+local function CreateButton(parentContainer, name, description, minTier, defaultText, callback)
+    local RowFrame = Instance.new("Frame")
+    RowFrame.Size = UDim2.new(1, -10, 0, 42)
+    RowFrame.Position = UDim2.new(0, 5, 0, 0)
+    RowFrame.BackgroundColor3 = Color3.fromRGB(20, 16, 30)
+    RowFrame.BackgroundTransparency = 1 
+    RowFrame.ZIndex = 4
+    RowFrame.Parent = parentContainer
+
+    local ClickArea = Instance.new("TextButton")
+    ClickArea.Size = UDim2.new(1, 0, 1, 0)
+    ClickArea.BackgroundTransparency = 1
+    ClickArea.Text = ""
+    ClickArea.ZIndex = 15 
+    ClickArea.Parent = RowFrame
+
+    local TierColor = (minTier == 2 and Color3.fromRGB(138, 43, 226)) or (minTier == 1 and Color3.fromRGB(50, 150, 255)) or Color3.fromRGB(100, 255, 100)
+    local TierDot = Instance.new("Frame")
+    TierDot.Size = UDim2.new(0, 6, 0, 6)
+    TierDot.Position = UDim2.new(0, 10, 0, 10)
+    TierDot.BackgroundColor3 = TierColor
+    Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
+    TierDot.Parent = RowFrame
+
+    local TitleLbl = Instance.new("TextLabel")
+    TitleLbl.Name = "TitleLbl"
+    TitleLbl.Size = UDim2.new(1, -100, 0, 16)
+    TitleLbl.Position = UDim2.new(0, 22, 0, 5)
+    TitleLbl.BackgroundTransparency = 1
+    TitleLbl.Text = name
+    TitleLbl.Font = Enum.Font.GothamMedium
+    TitleLbl.TextColor3 = Color3.fromRGB(230, 230, 230)
+    TitleLbl.TextSize = 12
+    TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLbl.Parent = RowFrame
+
+    local DescLbl = Instance.new("TextLabel")
+    DescLbl.Name = "DescLbl"
+    DescLbl.Size = UDim2.new(1, -100, 0, 14)
+    DescLbl.Position = UDim2.new(0, 22, 0, 22)
+    DescLbl.BackgroundTransparency = 1
+    DescLbl.Text = description
+    DescLbl.Font = Enum.Font.Gotham
+    DescLbl.TextColor3 = Color3.fromRGB(140, 140, 150)
+    DescLbl.TextSize = 10
+    DescLbl.TextXAlignment = Enum.TextXAlignment.Left
+    DescLbl.TextTruncate = Enum.TextTruncate.AtEnd
+    DescLbl.Parent = RowFrame
+
+    local ActionBtnFrame = Instance.new("Frame")
+    ActionBtnFrame.Size = UDim2.new(0, 70, 0, 22)
+    ActionBtnFrame.Position = UDim2.new(1, -80, 0.5, -11)
+    ActionBtnFrame.BackgroundColor3 = Color3.fromRGB(35, 25, 50)
+    ActionBtnFrame.ZIndex = 5
+    Instance.new("UICorner", ActionBtnFrame).CornerRadius = UDim.new(0, 6)
+    ActionBtnFrame.Parent = RowFrame
+
+    local ActionStroke = Instance.new("UIStroke")
+    ActionStroke.Color = Color3.fromRGB(138, 43, 226)
+    ActionStroke.Thickness = 1
+    ActionStroke.Parent = ActionBtnFrame
+
+    local ActionTxt = Instance.new("TextLabel")
+    ActionTxt.Size = UDim2.new(1, 0, 1, 0)
+    ActionTxt.BackgroundTransparency = 1
+    ActionTxt.Text = defaultText
+    ActionTxt.Font = Enum.Font.GothamBold
+    ActionTxt.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ActionTxt.TextSize = 10
+    ActionTxt.ZIndex = 6
+    ActionTxt.Parent = ActionBtnFrame
+
+    ClickArea.MouseButton1Click:Connect(function()
+        if UserTierValue < 0 then Notify("Önce Key giriniz!"); return end
+        if UserTierValue < minTier then Notify("Bu özellik " .. (minTier == 1 and "LITE" or "PRO") .. " gerektirir!"); return end
+
+        TweenService:Create(ActionBtnFrame, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(138, 43, 226)}):Play()
+        task.wait(0.1)
+        TweenService:Create(ActionBtnFrame, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(35, 25, 50)}):Play()
+        pcall(function() callback(ActionTxt) end)
+    end)
+    table.insert(FeatureElements, {UI = RowFrame, Tier = minTier})
 end
 
 local function CreateButton(parentContainer, name, description, minTier, defaultText, callback)
