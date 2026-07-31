@@ -228,9 +228,9 @@ MakeResizable(MainFrame, 480, 420)
 -- Koyu Mor & Siyah Wave Arka Plan
 local MainGradient = Instance.new("UIGradient")
 MainGradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(7, 5, 12)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(30, 10, 45)), -- Derin Mor
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(7, 5, 12))
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 0, 50)), -- Koyu Mor
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 32, 240)), -- Parlak Mor
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 0, 50)) -- Koyu Mor
 }
 MainGradient.Rotation = 45
 MainGradient.Parent = MainFrame
@@ -754,14 +754,14 @@ StatusTitle.TextXAlignment = Enum.TextXAlignment.Left
 StatusTitle.Parent = StatusFrame
 
 local StatusDate = Instance.new("TextLabel")
-StatusDate.Name = "ProStatusAnimText" -- YENİ EKLENDİ
-StatusDate.Size = UDim2.new(1, -25, 0, 15)
-StatusDate.Position = UDim2.new(0, 10, 0, 25)
+StatusDate.Name = "ProStatusAnimText"
+StatusDate.Size = UDim2.new(1, -10, 0, 20) -- Genişletildi
+StatusDate.Position = UDim2.new(0, 10, 0, 22)
 StatusDate.BackgroundTransparency = 1
-StatusDate.Text = "Last Updated: Today" -- Animasyon başlayana kadar bu yazacak, sonra yerini animasyona bırakacak
+StatusDate.Text = "Last Updated: Today"
 StatusDate.Font = Enum.Font.Gotham
 StatusDate.TextColor3 = Color3.fromRGB(120, 120, 130)
-StatusDate.TextSize = 10
+StatusDate.TextScaled = true -- Taşmayı KESİN engeller
 StatusDate.TextXAlignment = Enum.TextXAlignment.Left
 StatusDate.Parent = StatusFrame
 -- 4'lü Ortadaki Büyük Kartlar
@@ -804,15 +804,15 @@ local function CreateProCard(iconId, title, desc)
     T.Parent = C
 
     local D = Instance.new("TextLabel")
-    D.Size = UDim2.new(1, -10, 0, 40)
-    D.Position = UDim2.new(0, 5, 0, 65)
-    D.BackgroundTransparency = 1
-    D.Text = desc
-    D.Font = Enum.Font.Gotham
-    D.TextColor3 = Color3.fromRGB(150, 150, 160)
-    D.TextSize = 10
-    D.TextWrapped = true
-    D.Parent = C
+D.Size = UDim2.new(1, -10, 1, -65) -- Aşağıya doğru tüm boşluğu doldurur (Taşmayı önler)
+D.Position = UDim2.new(0, 5, 0, 65)
+D.BackgroundTransparency = 1
+D.Text = desc
+D.Font = Enum.Font.Gotham
+D.TextColor3 = Color3.fromRGB(150, 150, 160)
+D.TextSize = 10
+D.TextWrapped = true
+D.Parent = C
 end
 
 -- EMOJİLER YERİNE ROBLOX'UN TEMİZ İKONLARI EKLENDİ
@@ -822,18 +822,18 @@ CreateProCard("rbxassetid://6031091004", "Performance", "Optimized for the best 
 CreateProCard("rbxassetid://6031097229", "Customizable", "Customize the hub to your liking.")
 
 -- Quick Controls ve Information (Alt Kısım)
--- Konumu yukarı çekildi (0, 200'den 0, 185'e) ve Boyut düzeltildi
 local BottomContainer = Instance.new("Frame")
 BottomContainer.Size = UDim2.new(1, -20, 1, -240)
 BottomContainer.Position = UDim2.new(0, 10, 0, 195)
 BottomContainer.BackgroundTransparency = 1
 BottomContainer.Parent = ProHomeContainer
 
+-- QCFrame %60 genişlikte
 local QCFrame = Instance.new("Frame")
-QCFrame.Size = UDim2.new(0.65, -5, 1, -40) -- Execute barına yer açmak için -40
+QCFrame.Size = UDim2.new(0.60, 0, 1, -40) 
 QCFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 22)
 Instance.new("UICorner", QCFrame).CornerRadius = UDim.new(0, 8)
-ApplyAnimatedStroke(QCFrame, 1) -- ETRAFINA HAREKETLİ ÇİZGİ
+ApplyAnimatedStroke(QCFrame, 1)
 QCFrame.Parent = BottomContainer
 
 local QCTitle = Instance.new("TextLabel")
@@ -868,12 +868,11 @@ QCGrid.SortOrder = Enum.SortOrder.LayoutOrder
 QCGrid.Parent = QCGridContainer
 
 local function CreateQCToggle(name, callback)
-    local F = Instance.new("Frame") -- Arka plan frame
+    local F = Instance.new("Frame") 
     F.BackgroundColor3 = Color3.fromRGB(20, 16, 30)
     Instance.new("UICorner", F).CornerRadius = UDim.new(0, 6)
     F.Parent = QCGridContainer
 
-    -- HİTBOX ÇÖZÜMÜ: TextButton tüm Frame'i kaplayacak ve En önde olacak!
     local ClickArea = Instance.new("TextButton")
     ClickArea.Size = UDim2.new(1, 0, 1, 0)
     ClickArea.BackgroundTransparency = 1
@@ -921,7 +920,6 @@ local function CreateQCToggle(name, callback)
             TweenService:Create(Circ, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0, 2), BackgroundColor3 = Color3.fromRGB(200,200,200)}):Play()
         end
         
-        -- TÜRKÇE DİNAMİK BİLDİRİM DESTEĞİ
         local stateStr = toggled and ((currentLang == "TR") and "Açık" or "Enabled") or ((currentLang == "TR") and "Kapalı" or "Disabled")
         local localizedName = (currentLang == "TR") and (enToTr[name] or name) or name
         Notify(localizedName .. ": " .. stateStr)
@@ -930,7 +928,6 @@ local function CreateQCToggle(name, callback)
     end)
 end
 
--- GERÇEK SCRİPTLERE BAĞLI QUICK CONTROLS
 CreateQCToggle("God Mode", function(state)
     local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
     if hum then hum.MaxHealth = state and math.huge or 100; hum.Health = state and math.huge or 100 end
@@ -985,8 +982,16 @@ CreateQCToggle("Fly", function(state)
         
         QCFlyLoop = RunService.RenderStepped:Connect(function()
             local cam = Workspace.CurrentCamera
-            if hum.MoveDirection.Magnitude > 0 then
-                QCFlyBV.Velocity = cam.CFrame.LookVector * (hum.MoveDirection.Z * -50) + cam.CFrame.RightVector * (hum.MoveDirection.X * 50)
+            local moveDir = hum.MoveDirection
+            
+            -- MOBİL JOYSTICK VE KAMERA UYUMLU UÇUŞ
+            if moveDir.Magnitude > 0 then
+                local flatLook = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z).Unit
+                local flatRight = Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z).Unit
+                local forwardInput = flatLook:Dot(moveDir)
+                local rightInput = flatRight:Dot(moveDir)
+                local moveVector = (cam.CFrame.LookVector * forwardInput) + (cam.CFrame.RightVector * rightInput)
+                QCFlyBV.Velocity = moveVector * 50
             else
                 QCFlyBV.Velocity = Vector3.new(0, 0, 0)
             end
@@ -1002,15 +1007,16 @@ end)
 
 CreateQCToggle("ESP", function(state)
     Toggles.PlayerESP = state
-    UpdateESP()
+    pcall(function() if UpdateESP then UpdateESP() end end) -- SCOPE HATASI ÖNLENDİ
 end)
 
+-- InfoFrame %40 genişlikte ve QCFrame'in yanına tam hizalandı
 local InfoFrame = Instance.new("Frame")
-InfoFrame.Size = UDim2.new(0.35, -5, 1, -40)
-InfoFrame.Position = UDim2.new(0.65, 10, 0, 0)
+InfoFrame.Size = UDim2.new(0.40, -10, 1, -40)
+InfoFrame.Position = UDim2.new(0.60, 10, 0, 0)
 InfoFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 22)
 Instance.new("UICorner", InfoFrame).CornerRadius = UDim.new(0, 8)
-ApplyAnimatedStroke(InfoFrame, 1) -- ETRAFINA HAREKETLİ ÇİZGİ
+ApplyAnimatedStroke(InfoFrame, 1)
 InfoFrame.Parent = BottomContainer
 
 local InfoTitle = Instance.new("TextLabel")
@@ -1028,7 +1034,7 @@ local InfoIcon = Instance.new("ImageLabel")
 InfoIcon.Size = UDim2.new(0, 14, 0, 14)
 InfoIcon.Position = UDim2.new(0, -18, 0.5, -7)
 InfoIcon.BackgroundTransparency = 1
-InfoIcon.Image = "rbxassetid://6031093848" -- Bilgi (i) ikonu
+InfoIcon.Image = "rbxassetid://6031093848" 
 InfoIcon.ImageColor3 = Color3.fromRGB(138, 43, 226)
 InfoIcon.Parent = InfoTitle
 
@@ -1048,22 +1054,21 @@ InfoDesc.Parent = InfoFrame
 local DiscordBtn = Instance.new("TextButton")
 DiscordBtn.Size = UDim2.new(1, -20, 0, 30)
 DiscordBtn.Position = UDim2.new(0, 10, 1, -40)
-DiscordBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242) -- Discord Orjinal Rengi
+DiscordBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242) 
 DiscordBtn.Text = "Join Discord"
 DiscordBtn.Font = Enum.Font.GothamBold
 DiscordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 DiscordBtn.TextSize = 12
-DiscordBtn.ZIndex = 50 -- Hitbox koruması
+DiscordBtn.ZIndex = 50 
 Instance.new("UICorner", DiscordBtn).CornerRadius = UDim.new(0, 6)
 DiscordBtn.Parent = InfoFrame
 
--- Command Bar (Boyutları ve Hitboxları Düzeltildi, Daha Yukarı Alındı)
 local CmdFrame = Instance.new("Frame")
 CmdFrame.Size = UDim2.new(1, -20, 0, 35)
 CmdFrame.Position = UDim2.new(0, 10, 1, -35)
 CmdFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 22)
 Instance.new("UICorner", CmdFrame).CornerRadius = UDim.new(0, 8)
-ApplyAnimatedStroke(CmdFrame, 1) -- ETRAFINA HAREKETLİ ÇİZGİ
+ApplyAnimatedStroke(CmdFrame, 1) 
 CmdFrame.Parent = BottomContainer
 
 local CmdInput = Instance.new("TextBox")
