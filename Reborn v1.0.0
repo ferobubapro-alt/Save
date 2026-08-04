@@ -21,7 +21,7 @@ end
 end)
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Size = "DarkerSH"
+ScreenGui.Name = "DarkerSH"
 ScreenGui.ResetOnSpawn = false
 
 local success = pcall(function() ScreenGui.Parent = CoreGui end)
