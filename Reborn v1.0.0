@@ -698,7 +698,7 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 -- ==========================================
--- PRO ARAYÜZ (MIDNIGHT HUB) ANA MENÜ TASARIMI
+-- PRO ARAYÜZ (DARKER HUB) ANA MENÜ TASARIMI
 -- ==========================================
 local ProHomeContainer = Instance.new("Frame")
 ProHomeContainer.Size = UDim2.new(1, 0, 1, 0)
@@ -712,10 +712,11 @@ local ProWelcome = Instance.new("TextLabel")
 ProWelcome.Size = UDim2.new(0.6, 0, 0, 30)
 ProWelcome.Position = UDim2.new(0, 10, 0, 10)
 ProWelcome.BackgroundTransparency = 1
-ProWelcome.Text = "Welcome to DarkerSH"
+ProWelcome.RichText = true -- Tasarımdaki gibi belirli kelimeyi renklendirmek için
+ProWelcome.Text = 'Welcome to <font color="rgb(157,78,221)">DarkerSH</font>'
 ProWelcome.Font = Enum.Font.GothamBlack
 ProWelcome.TextColor3 = Color3.fromRGB(255, 255, 255)
-ProWelcome.TextSize = 22
+ProWelcome.TextSize = 24 -- Tasarıma uygun biraz daha büyük
 ProWelcome.TextXAlignment = Enum.TextXAlignment.Left
 ProWelcome.Parent = ProHomeContainer
 
@@ -725,7 +726,7 @@ ProSub.Position = UDim2.new(0, 10, 0, 35)
 ProSub.BackgroundTransparency = 1
 ProSub.Text = "Your all-in-one hub for dominating the game."
 ProSub.Font = Enum.Font.Gotham
-ProSub.TextColor3 = Color3.fromRGB(150, 150, 160)
+ProSub.TextColor3 = Color3.fromRGB(155, 152, 166) -- Tasarımdaki grimsi metin rengi
 ProSub.TextSize = 12
 ProSub.TextXAlignment = Enum.TextXAlignment.Left
 ProSub.Parent = ProHomeContainer
@@ -734,7 +735,7 @@ ProSub.Parent = ProHomeContainer
 local StatusFrame = Instance.new("Frame")
 StatusFrame.Size = UDim2.new(0, 150, 0, 50)
 StatusFrame.Position = UDim2.new(1, -160, 0, 10)
-StatusFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 25)
+StatusFrame.BackgroundColor3 = Color3.fromRGB(23, 18, 43)
 Instance.new("UICorner", StatusFrame).CornerRadius = UDim.new(0, 8)
 StatusFrame.Parent = ProHomeContainer
 
@@ -790,14 +791,14 @@ CardLayout.Parent = CardsContainer
 local function CreateProCard(iconId, title, desc)
     local C = Instance.new("Frame")
     C.Size = UDim2.new(0.25, -7.5, 1, 0)
-    C.BackgroundColor3 = Color3.fromRGB(20, 5, 35) -- Temaya uyumlu mor taban
-    C.BackgroundTransparency = 0.6 -- YENİ: Şık saydamlık
-    Instance.new("UICorner", C).CornerRadius = UDim.new(0, 8)
+    C.BackgroundColor3 = Color3.fromRGB(23, 18, 43) -- Tasarımdaki kart zemin rengi
+    C.BackgroundTransparency = 0 -- Saydamlığı kaldırıldı, tasarımda solid
+    Instance.new("UICorner", C).CornerRadius = UDim.new(0, 10)
     C.Parent = CardsContainer
     
     local CStroke = Instance.new("UIStroke")
-    CStroke.Color = Color3.fromRGB(138, 43, 226) -- Koyu mor/mor statik çizgi
-    CStroke.Transparency = 0.5 -- Yarı saydam zarif çerçeve
+    CStroke.Color = Color3.fromRGB(157, 78, 221) 
+    CStroke.Transparency = 0.8 -- Tasarımdaki çok hafif glow çizgisi
     CStroke.Thickness = 1.2
     CStroke.Parent = C
     -- ApplyChasingBorder(CStroke) -> İPTAL EDİLDİ
@@ -847,7 +848,7 @@ BottomContainer.Parent = ProHomeContainer
 
 local QCFrame = Instance.new("Frame")
 QCFrame.Size = UDim2.new(0.65, -5, 1, 0)
-QCFrame.BackgroundColor3 = Color3.fromRGB(20, 15, 35)
+QCFrame.BackgroundColor3 = Color3.fromRGB(23, 18, 43)
 QCFrame.ZIndex = 50
 Instance.new("UICorner", QCFrame).CornerRadius = UDim.new(0, 8)
 QCFrame.Parent = BottomContainer
@@ -911,7 +912,7 @@ local function CreateQCToggle(name, callback)
     local Btn = Instance.new("Frame")
     Btn.Size = UDim2.new(0, 30, 0, 15)
     Btn.Position = UDim2.new(1, -40, 0.5, -7.5)
-    Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    Btn.BackgroundColor3 = Color3.fromRGB(11, 9, 20) -- Tasarımdaki koyu toggle içi
     Btn.ZIndex = 61
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(1, 0)
     Btn.Parent = F
@@ -928,11 +929,10 @@ local function CreateQCToggle(name, callback)
     F.MouseButton1Click:Connect(function()
         toggled = not toggled
         if toggled then
-            TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(75, 40, 150)}):Play()
+            TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(92, 36, 211)}):Play() -- Tasarımdaki Mor
             TweenService:Create(Circ, TweenInfo.new(0.2), {Position = UDim2.new(1, -13, 0, 2), BackgroundColor3 = Color3.fromRGB(255,255,255)}):Play()
         else
-            TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 55)}):Play()
-            TweenService:Create(Circ, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0, 2), BackgroundColor3 = Color3.fromRGB(200,200,200)}):Play()
+            TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(11, 9, 20)}):Play() -- Tasarımdaki Koyu İç
         end
         
         -- DİNAMİK BİLDİRİM SİSTEMİ (TR/EN)
@@ -994,8 +994,8 @@ end)
 local InfoFrame = Instance.new("Frame")
 InfoFrame.Size = UDim2.new(0.35, -5, 1, 0)
 InfoFrame.Position = UDim2.new(0.65, 10, 0, 0)
-InfoFrame.BackgroundColor3 = Color3.fromRGB(20, 5, 35)
-InfoFrame.BackgroundTransparency = 0.6 -- YENİ: Temaya uygun saydamlık
+InfoFrame.BackgroundColor3 = Color3.fromRGB(23, 18, 43)
+InfoFrame.BackgroundTransparency = 0
 InfoFrame.ZIndex = 50
 Instance.new("UICorner", InfoFrame).CornerRadius = UDim.new(0, 8)
 InfoFrame.Parent = BottomContainer
@@ -1035,7 +1035,7 @@ InfoDesc.Parent = InfoFrame
 local DiscordBtn = Instance.new("TextButton")
 DiscordBtn.Size = UDim2.new(1, -20, 0, 30)
 DiscordBtn.Position = UDim2.new(0, 10, 1, -45) -- Daha yukarı alındı
-DiscordBtn.BackgroundColor3 = Color3.fromRGB(75, 40, 150)
+DiscordBtn.BackgroundColor3 = Color3.fromRGB(92, 36, 211)
 DiscordBtn.Text = "Join Discord"
 DiscordBtn.Font = Enum.Font.GothamBold
 DiscordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1055,7 +1055,7 @@ end)
 local CmdFrame = Instance.new("Frame")
 CmdFrame.Size = UDim2.new(1, -20, 0, 35)
 CmdFrame.Position = UDim2.new(0, 10, 1, -55) -- Eski hali -40'tı, yukarı taşındı
-CmdFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 25)
+CmdFrame.BackgroundColor3 = Color3.fromRGB(23, 18, 43)
 CmdFrame.ZIndex = 50
 Instance.new("UICorner", CmdFrame).CornerRadius = UDim.new(0, 8)
 CmdFrame.Parent = ProHomeContainer
@@ -1082,7 +1082,7 @@ CmdInput.Parent = CmdFrame
 local CmdExec = Instance.new("TextButton")
 CmdExec.Size = UDim2.new(0, 80, 0, 25)
 CmdExec.Position = UDim2.new(1, -85, 0, 5)
-CmdExec.BackgroundColor3 = Color3.fromRGB(75, 40, 150)
+CmdExec.BackgroundColor3 = Color3.fromRGB(92, 36, 211)
 CmdExec.Text = "▶ Execute"
 CmdExec.Font = Enum.Font.GothamBold
 CmdExec.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -2943,23 +2943,23 @@ IntroVerifyBtn.MouseButton1Click:Connect(function()
         MainStroke.Color = Color3.fromRGB(50, 50, 50)
         Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
         
-    elseif UserTierValue == 2 then
-        -- PRO: Midnight Hub Görünümü (Dinamik Wave ve Chasing Borders)
+   elseif UserTierValue == 2 then
+        -- PRO: DarkerSH Görünümü (Birebir Tasarım Renkleri)
         
-        -- ARKA PLAN WAVE GRADIENTİ GÜNCELLENİP AÇILIYOR (Koyu Mor - Mor Geçişi)
+        -- ARKA PLAN WAVE GRADIENTİ GÜNCELLENİP AÇILIYOR
         MainGradient.Enabled = true
         MainGradient.Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 5, 40)),     -- Çok Koyu Mor
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(138, 43, 226)), -- Parlak Canlı Mor
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 5, 40))
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(11, 9, 20)),      -- Görseldeki mat/koyu arka plan
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(28, 15, 45)),   -- Çok hafif koyu mor dalga
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(11, 9, 20))
         }
         
         -- Ana Çerçeveye de Kovalayan Çizgi Ekleniyor
         ApplyChasingBorder(MainStroke)
 
-        MainFrame.BackgroundColor3 = Color3.fromRGB(12, 10, 22)
-        Sidebar.BackgroundColor3 = Color3.fromRGB(15, 12, 25)
-        TopBar.BackgroundColor3 = Color3.fromRGB(12, 10, 22)
+        MainFrame.BackgroundColor3 = Color3.fromRGB(11, 9, 20) -- Tasarımındaki ana koyu zemin
+        Sidebar.BackgroundColor3 = Color3.fromRGB(14, 11, 26)  -- Menüdeki hafif açık yan panel
+        TopBar.BackgroundColor3 = Color3.fromRGB(11, 9, 20)
         
         WelcomeTitle.Visible = false
         StatsFrame.Visible = false
