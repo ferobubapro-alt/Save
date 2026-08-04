@@ -21,7 +21,7 @@ end
 end)
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DarkerSH"
+ScreenGui.Size = "DarkerSH"
 ScreenGui.ResetOnSpawn = false
 
 local success = pcall(function() ScreenGui.Parent = CoreGui end)
@@ -861,7 +861,7 @@ QCStroke.Thickness = 1.5
 ApplyChasingBorder(QCStroke)
 
 local QCTitle = Instance.new("TextLabel")
-QCTitle.Name = UDim2.new(1, -20, 0, 25)
+QCTitle.Size = UDim2.new(1, -20, 0, 25)
 QCTitle.Position = UDim2.new(0, 10, 0, 5)
 QCTitle.BackgroundTransparency = 1
 QCTitle.Text = "Quick Controls"
@@ -1104,7 +1104,7 @@ InfoStroke.Thickness = 1.2
 -- ApplyChasingBorder(InfoStroke) -> İPTAL EDİLDİ
 
 local InfoTitle = Instance.new("TextLabel")
-InfoTitle.Name = UDim2.new(1, -20, 0, 25)
+InfoTitle.Size = UDim2.new(1, -20, 0, 25)
 InfoTitle.Position = UDim2.new(0, 10, 0, 5)
 InfoTitle.BackgroundTransparency = 1
 InfoTitle.Text = "Information"
@@ -1116,7 +1116,7 @@ InfoTitle.ZIndex = 51
 InfoTitle.Parent = InfoFrame
 
 local InfoDesc = Instance.new("TextLabel")
-InfoDesc.Name = UDim2.new(1, -20, 1, -70)
+InfoDesc.Size = UDim2.new(1, -20, 1, -70)
 InfoDesc.Position = UDim2.new(0, 10, 0, 35)
 InfoDesc.BackgroundTransparency = 1
 InfoDesc.Text = "DarkerSH is constantly updated with new features and improvements.\n\nJoin our community for support and updates!"
