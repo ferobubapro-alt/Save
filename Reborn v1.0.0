@@ -6,7 +6,6 @@ local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local UserInputService = game:GetService("UserInputService")
 local Stats = game:GetService("Stats")
-
 local LocalPlayer = Players.LocalPlayer
 while not LocalPlayer do
 Players.PlayerAdded:Wait()
@@ -1280,7 +1279,7 @@ local ClickArea = Instance.new("TextButton")
     ClickArea.Parent = RowFrame
 
     -- KABA YAZI YERİNE ANİMASYONLU NOKTA (DOT) SİSTEMİ
-   local TierDot = Instance.new("Frame")
+  local TierDot = Instance.new("Frame")
     TierDot.Size = UDim2.new(0, 8, 0, 8)
     TierDot.Position = UDim2.new(0, 10, 0, 9) -- YENİ: Tam yazının hizasına sabitlendi
     TierDot.ZIndex = 5
