@@ -836,37 +836,41 @@ CreateProCard("rbxassetid://6023282396", "Performance", "Optimized for the best 
 CreateProCard("rbxassetid://6022668888", "Customizable", "Customize the hub to your liking.")
 -- Quick Controls ve Information (Alt Kısım)
 local BottomContainer = Instance.new("Frame")
-BottomContainer.Size = UDim2.new(1, -20, 1, -250)
-BottomContainer.Position = UDim2.new(0, 10, 0, 200)
+BottomContainer.Size = UDim2.new(1, -20, 1, -240) -- Daha büyük, yukarı kaydı
+BottomContainer.Position = UDim2.new(0, 10, 0, 185) -- Daha yukarı taşıdık
 BottomContainer.BackgroundTransparency = 1
+BottomContainer.ZIndex = 50 -- Tıklama düzeltmesi
 BottomContainer.Parent = ProHomeContainer
 
 local QCFrame = Instance.new("Frame")
 QCFrame.Size = UDim2.new(0.65, -5, 1, 0)
 QCFrame.BackgroundColor3 = Color3.fromRGB(20, 15, 35)
+QCFrame.ZIndex = 50
 Instance.new("UICorner", QCFrame).CornerRadius = UDim.new(0, 8)
 QCFrame.Parent = BottomContainer
 
 local QCStroke = Instance.new("UIStroke", QCFrame)
 QCStroke.Color = Color3.fromRGB(255, 255, 255)
 QCStroke.Thickness = 1.5
-ApplyChasingBorder(QCStroke) -- YENİ EKLENDİ
+ApplyChasingBorder(QCStroke)
 
 local QCTitle = Instance.new("TextLabel")
 QCTitle.Size = UDim2.new(1, -20, 0, 25)
 QCTitle.Position = UDim2.new(0, 10, 0, 5)
 QCTitle.BackgroundTransparency = 1
-QCTitle.Text = "Quick Controls" -- EMOJİ SİLİNDİ
+QCTitle.Text = "Quick Controls"
 QCTitle.Font = Enum.Font.GothamBold
 QCTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 QCTitle.TextSize = 12
 QCTitle.TextXAlignment = Enum.TextXAlignment.Left
+QCTitle.ZIndex = 51
 QCTitle.Parent = QCFrame
 
 local QCGridContainer = Instance.new("Frame")
 QCGridContainer.Size = UDim2.new(1, -20, 1, -35)
 QCGridContainer.Position = UDim2.new(0, 10, 0, 30)
 QCGridContainer.BackgroundTransparency = 1
+QCGridContainer.ZIndex = 51
 QCGridContainer.Parent = QCFrame
 
 local QCGrid = Instance.new("UIGridLayout")
@@ -876,10 +880,12 @@ QCGrid.SortOrder = Enum.SortOrder.LayoutOrder
 QCGrid.Parent = QCGridContainer
 
 local function CreateQCToggle(name, callback)
-    local F = Instance.new("TextButton") -- Tıklanabilir alan
+    local F = Instance.new("TextButton") 
     F.BackgroundColor3 = Color3.fromRGB(15, 12, 25)
     F.Text = ""
     F.AutoButtonColor = false
+    F.ZIndex = 60 -- Tıklama için katman yükseltildi
+    F.Active = true
     Instance.new("UICorner", F).CornerRadius = UDim.new(0, 6)
     F.Parent = QCGridContainer
     
@@ -890,8 +896,9 @@ local function CreateQCToggle(name, callback)
     T.Text = name
     T.Font = Enum.Font.Gotham
     T.TextColor3 = Color3.fromRGB(200, 200, 200)
-    T.TextScaled = true -- Taşmayı Engeller (Responsive)
+    T.TextScaled = true 
     T.TextXAlignment = Enum.TextXAlignment.Left
+    T.ZIndex = 61
     T.Parent = F
     
     local UIPadding = Instance.new("UIPadding", T)
@@ -902,6 +909,7 @@ local function CreateQCToggle(name, callback)
     Btn.Size = UDim2.new(0, 30, 0, 15)
     Btn.Position = UDim2.new(1, -40, 0.5, -7.5)
     Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    Btn.ZIndex = 61
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(1, 0)
     Btn.Parent = F
 
@@ -909,6 +917,7 @@ local function CreateQCToggle(name, callback)
     Circ.Size = UDim2.new(0, 11, 0, 11)
     Circ.Position = UDim2.new(0, 2, 0, 2)
     Circ.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+    Circ.ZIndex = 62
     Instance.new("UICorner", Circ).CornerRadius = UDim.new(1, 0)
     Circ.Parent = Btn
     
@@ -923,7 +932,7 @@ local function CreateQCToggle(name, callback)
             TweenService:Create(Circ, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0, 2), BackgroundColor3 = Color3.fromRGB(200,200,200)}):Play()
         end
         
-        -- DİNAMİK BİLDİRİM SİSTEMİ (TR/EN Destekli)
+        -- DİNAMİK BİLDİRİM SİSTEMİ (TR/EN)
         local stateStr = toggled and ((currentLang == "TR") and "Açık" or "Enabled") or ((currentLang == "TR") and "Kapalı" or "Disabled")
         local localizedName = (currentLang == "TR") and (enToTr[name] or name) or name
         Notify(localizedName .. ": " .. stateStr)
@@ -971,34 +980,37 @@ CreateQCToggle("Noclip", function(state)
 end)
 
 CreateQCToggle("Fly", function(state)
-    Workspace.Gravity = state and 0 or 196.2 -- Pratik havada süzülme (Hızlı Uçuş)
+    Workspace.Gravity = state and 0 or 196.2 
 end)
 
 CreateQCToggle("ESP", function(state)
     Toggles.PlayerESP = state
     UpdateESP()
 end)
+
 local InfoFrame = Instance.new("Frame")
 InfoFrame.Size = UDim2.new(0.35, -5, 1, 0)
 InfoFrame.Position = UDim2.new(0.65, 10, 0, 0)
 InfoFrame.BackgroundColor3 = Color3.fromRGB(20, 15, 35)
+InfoFrame.ZIndex = 50
 Instance.new("UICorner", InfoFrame).CornerRadius = UDim.new(0, 8)
 InfoFrame.Parent = BottomContainer
 
 local InfoStroke = Instance.new("UIStroke", InfoFrame)
 InfoStroke.Color = Color3.fromRGB(255, 255, 255)
 InfoStroke.Thickness = 1.5
-ApplyChasingBorder(InfoStroke) -- YENİ EKLENDİ
+ApplyChasingBorder(InfoStroke)
 
 local InfoTitle = Instance.new("TextLabel")
 InfoTitle.Size = UDim2.new(1, -20, 0, 25)
 InfoTitle.Position = UDim2.new(0, 10, 0, 5)
 InfoTitle.BackgroundTransparency = 1
-InfoTitle.Text = "Information" -- EMOJİ SİLİNDİ
+InfoTitle.Text = "Information"
 InfoTitle.Font = Enum.Font.GothamBold
 InfoTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 InfoTitle.TextSize = 12
 InfoTitle.TextXAlignment = Enum.TextXAlignment.Left
+InfoTitle.ZIndex = 51
 InfoTitle.Parent = InfoFrame
 
 local InfoDesc = Instance.new("TextLabel")
@@ -1012,31 +1024,41 @@ InfoDesc.TextSize = 11
 InfoDesc.TextWrapped = true
 InfoDesc.TextXAlignment = Enum.TextXAlignment.Left
 InfoDesc.TextYAlignment = Enum.TextYAlignment.Top
+InfoDesc.ZIndex = 51
 InfoDesc.Parent = InfoFrame
 
 local DiscordBtn = Instance.new("TextButton")
 DiscordBtn.Size = UDim2.new(1, -20, 0, 30)
-DiscordBtn.Position = UDim2.new(0, 10, 1, -40)
+DiscordBtn.Position = UDim2.new(0, 10, 1, -45) -- Daha yukarı alındı
 DiscordBtn.BackgroundColor3 = Color3.fromRGB(75, 40, 150)
 DiscordBtn.Text = "Join Discord"
 DiscordBtn.Font = Enum.Font.GothamBold
 DiscordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 DiscordBtn.TextSize = 12
+DiscordBtn.ZIndex = 60 -- Tıklama Düzeltmesi
+DiscordBtn.Active = true
 Instance.new("UICorner", DiscordBtn).CornerRadius = UDim.new(0, 6)
 DiscordBtn.Parent = InfoFrame
+
+DiscordBtn.MouseButton1Click:Connect(function()
+    local msg = (currentLang == "TR") and "Discord linki kopyalandı!" or "Discord link copied!"
+    Notify(msg)
+    pcall(function() setclipboard("https://discord.gg/NoDiscordYet!") end) -- Linki buraya eklersin
+end)
 
 -- Command Bar (En Alt)
 local CmdFrame = Instance.new("Frame")
 CmdFrame.Size = UDim2.new(1, -20, 0, 35)
-CmdFrame.Position = UDim2.new(0, 10, 1, -40)
+CmdFrame.Position = UDim2.new(0, 10, 1, -55) -- Eski hali -40'tı, yukarı taşındı
 CmdFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 25)
+CmdFrame.ZIndex = 50
 Instance.new("UICorner", CmdFrame).CornerRadius = UDim.new(0, 8)
 CmdFrame.Parent = ProHomeContainer
 
 local CmdStroke = Instance.new("UIStroke", CmdFrame)
 CmdStroke.Color = Color3.fromRGB(255, 255, 255)
 CmdStroke.Thickness = 1.5
-ApplyChasingBorder(CmdStroke) -- YENİ EKLENDİ
+ApplyChasingBorder(CmdStroke)
 
 local CmdInput = Instance.new("TextBox")
 CmdInput.Size = UDim2.new(1, -100, 1, 0)
@@ -1048,6 +1070,8 @@ CmdInput.Font = Enum.Font.Gotham
 CmdInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 CmdInput.TextSize = 11
 CmdInput.TextXAlignment = Enum.TextXAlignment.Left
+CmdInput.ZIndex = 60 -- Tıklama sorunu düzeltmesi
+CmdInput.Active = true
 CmdInput.Parent = CmdFrame
 
 local CmdExec = Instance.new("TextButton")
@@ -1058,9 +1082,19 @@ CmdExec.Text = "▶ Execute"
 CmdExec.Font = Enum.Font.GothamBold
 CmdExec.TextColor3 = Color3.fromRGB(255, 255, 255)
 CmdExec.TextSize = 11
+CmdExec.ZIndex = 60 -- Tıklama sorunu düzeltmesi
+CmdExec.Active = true
 Instance.new("UICorner", CmdExec).CornerRadius = UDim.new(0, 6)
 CmdExec.Parent = CmdFrame
 
+CmdExec.MouseButton1Click:Connect(function()
+    local text = CmdInput.Text
+    if text ~= "" then
+        local msg = (currentLang == "TR") and "Komut denendi: " or "Attempted: "
+        Notify(msg .. text)
+        CmdInput.Text = ""
+    end
+end)
 -- ==========================================
 -- KART VE WIDGET SİSTEMİ
 -- ==========================================
@@ -1232,30 +1266,45 @@ local function CreateToggle(parentContainer, name, description, minTier, callbac
     RowFrame.ZIndex = 4
     RowFrame.Parent = parentContainer
     Instance.new("UICorner", RowFrame).CornerRadius = UDim.new(0, 6)
-
-    local ClickArea = Instance.new("TextButton")
+local ClickArea = Instance.new("TextButton")
     ClickArea.Size = UDim2.new(1, 0, 1, 0)
     ClickArea.BackgroundTransparency = 1
     ClickArea.Text = ""
-    ClickArea.ZIndex = 15 -- Tıklama sorununu engeller
+    ClickArea.ZIndex = 15 
     ClickArea.Parent = RowFrame
 
-    local TierLbl = Instance.new("TextLabel")
-    TierLbl.Size = UDim2.new(0, 45, 0, 15)
-    TierLbl.Position = UDim2.new(0, 5, 0, 5)
-    TierLbl.BackgroundColor3 = (minTier == 2 and Color3.fromRGB(138, 43, 226)) or (minTier == 1 and Color3.fromRGB(50, 150, 255)) or Color3.fromRGB(100, 100, 100)
-    TierLbl.Text = (minTier == 2 and "PRO") or (minTier == 1 and "LITE") or "FREE"
-    TierLbl.Font = Enum.Font.GothamBold
-    TierLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TierLbl.TextSize = 8
-    TierLbl.ZIndex = 5
-    Instance.new("UICorner", TierLbl).CornerRadius = UDim.new(0, 4)
-    TierLbl.Parent = RowFrame
+    -- KABA YAZI YERİNE ANİMASYONLU NOKTA (DOT) SİSTEMİ
+    local TierDot = Instance.new("Frame")
+    TierDot.Size = UDim2.new(0, 8, 0, 8)
+    TierDot.Position = UDim2.new(0, 10, 0.5, -4)
+    TierDot.ZIndex = 5
+    Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
+    TierDot.Parent = RowFrame
+
+    if minTier == 2 then
+        TierDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        local dotGrad = Instance.new("UIGradient")
+        dotGrad.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(138, 43, 226)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(40, 10, 60)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(138, 43, 226))
+        }
+        dotGrad.Parent = TierDot
+        task.spawn(function()
+            while task.wait(0.02) do
+                if dotGrad.Parent then dotGrad.Rotation = (dotGrad.Rotation + 5) % 360 else break end
+            end
+        end)
+    elseif minTier == 1 then
+        TierDot.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+    else
+        TierDot.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    end
 
     local TitleLbl = Instance.new("TextLabel")
     TitleLbl.Name = "TitleLbl"
     TitleLbl.Size = UDim2.new(1, -100, 0, 20)
-    TitleLbl.Position = UDim2.new(0, 55, 0, 3)
+    TitleLbl.Position = UDim2.new(0, 25, 0, 3) -- Yazı, noktaya daha yakın olması için 55'ten 25'e çekildi
     TitleLbl.BackgroundTransparency = 1
     TitleLbl.Text = name
     TitleLbl.Font = Enum.Font.GothamBold
@@ -1344,22 +1393,38 @@ local function CreateButton(parentContainer, name, description, minTier, default
     ClickArea.ZIndex = 15 
     ClickArea.Parent = RowFrame
 
-    local TierLbl = Instance.new("TextLabel")
-    TierLbl.Size = UDim2.new(0, 45, 0, 15)
-    TierLbl.Position = UDim2.new(0, 5, 0, 5)
-    TierLbl.BackgroundColor3 = (minTier == 2 and Color3.fromRGB(138, 43, 226)) or (minTier == 1 and Color3.fromRGB(50, 150, 255)) or Color3.fromRGB(100, 100, 100)
-    TierLbl.Text = (minTier == 2 and "PRO") or (minTier == 1 and "LITE") or "FREE"
-    TierLbl.Font = Enum.Font.GothamBold
-    TierLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TierLbl.TextSize = 8
-    TierLbl.ZIndex = 5
-    Instance.new("UICorner", TierLbl).CornerRadius = UDim.new(0, 4)
-    TierLbl.Parent = RowFrame
+    -- KABA YAZI YERİNE ANİMASYONLU NOKTA (DOT) SİSTEMİ
+    local TierDot = Instance.new("Frame")
+    TierDot.Size = UDim2.new(0, 8, 0, 8)
+    TierDot.Position = UDim2.new(0, 10, 0.5, -4)
+    TierDot.ZIndex = 5
+    Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
+    TierDot.Parent = RowFrame
+
+    if minTier == 2 then
+        TierDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        local dotGrad = Instance.new("UIGradient")
+        dotGrad.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(138, 43, 226)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(40, 10, 60)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(138, 43, 226))
+        }
+        dotGrad.Parent = TierDot
+        task.spawn(function()
+            while task.wait(0.02) do
+                if dotGrad.Parent then dotGrad.Rotation = (dotGrad.Rotation + 5) % 360 else break end
+            end
+        end)
+    elseif minTier == 1 then
+        TierDot.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+    else
+        TierDot.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    end
 
     local TitleLbl = Instance.new("TextLabel")
     TitleLbl.Name = "TitleLbl"
     TitleLbl.Size = UDim2.new(1, -100, 0, 20)
-    TitleLbl.Position = UDim2.new(0, 55, 0, 3)
+    TitleLbl.Position = UDim2.new(0, 25, 0, 3)
     TitleLbl.BackgroundTransparency = 1
     TitleLbl.Text = name
     TitleLbl.Font = Enum.Font.GothamBold
@@ -2857,6 +2922,7 @@ IntroVerifyBtn.MouseButton1Click:Connect(function()
 
     TierText.Text = tierName
     KeyContainer:Destroy()
+    
     -- === 1. ÖZELLİKLERİ TIER'E GÖRE GİZLEME ===
     for _, item in ipairs(FeatureElements) do
         if UserTierValue < item.Tier then
@@ -2872,7 +2938,7 @@ IntroVerifyBtn.MouseButton1Click:Connect(function()
         MainStroke.Color = Color3.fromRGB(50, 50, 50)
         Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
         
-       elseif UserTierValue == 2 then
+    elseif UserTierValue == 2 then
         -- PRO: Midnight Hub Görünümü (Dinamik Wave ve Chasing Borders)
         
         -- ARKA PLAN WAVE GRADIENTİ GÜNCELLENİP AÇILIYOR
@@ -2964,84 +3030,6 @@ IntroVerifyBtn.MouseButton1Click:Connect(function()
         Title.Text = "DarkerSH"
         ProfileFrame.Visible = false
     end
-        MainFrame.BackgroundColor3 = Color3.fromRGB(12, 10, 22)
-        MainStroke.Color = Color3.fromRGB(75, 40, 150)
-        Sidebar.BackgroundColor3 = Color3.fromRGB(15, 12, 25)
-        TopBar.BackgroundColor3 = Color3.fromRGB(12, 10, 22)
-        
-        WelcomeTitle.Visible = false
-        StatsFrame.Visible = false
-        ProHomeContainer.Visible = true
-        
-        local tabIcons = {
-            ["Ana Menü"] = "🏠", ["Farm"] = "⚡", ["Oyuncu"] = "👤", 
-            ["Savaş"] = "⚔️", ["Görsel"] = "👁️", ["Işınlanma"] = "🚀", 
-            ["Groq AI"] = "🤖", ["Ayarlar"] = "⚙️"
-        }
-        
-for tName, tabData in pairs(Tabs) do
-            tabData.Button.TextXAlignment = Enum.TextXAlignment.Left
-            local pad = Instance.new("UIPadding", tabData.Button)
-            pad.PaddingLeft = UDim.new(0, 35)
-            
-            local IconLbl = Instance.new("TextLabel")
-            IconLbl.Size = UDim2.new(0, 20, 1, 0)
-            IconLbl.Position = UDim2.new(0, -25, 0, 0) 
-            IconLbl.BackgroundTransparency = 1
-            IconLbl.Text = tabIcons[tName] or "📁"
-            IconLbl.Font = Enum.Font.GothamBold
-            IconLbl.TextSize = 14
-            IconLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-            IconLbl.Parent = tabData.Button
-
-            -- PARLAMA (WAVE) GRADIENTİ OLUŞTURULUYOR
-            local TabGrad = Instance.new("UIGradient")
-            TabGrad.Name = "TabWaveGradient"
-            TabGrad.Color = ColorSequence.new{
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 10, 60)), -- Siyah-Koyu Mor
-                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 32, 240)), -- Parlak Mor
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 10, 60))
-            }
-            TabGrad.Rotation = 0
-            TabGrad.Parent = tabData.Button
-            TabGrad.Enabled = false
-            
-            -- Sağa doğru akma animasyonu
-            task.spawn(function()
-                local offset = -1
-                while task.wait(0.01) do
-                    if TabGrad.Enabled then
-                        offset = offset + 0.02
-                        if offset > 1 then offset = -1 end
-                        TabGrad.Offset = Vector2.new(offset, 0)
-                    end
-                end
-            end)
-            
-            if tabData.Page.Visible then
-                tabData.Button.BackgroundTransparency = 1
-                TabGrad.Enabled = true
-            else
-                tabData.Button.BackgroundTransparency = 1
-                TabGrad.Enabled = false
-                tabData.Button.TextColor3 = Color3.fromRGB(150, 150, 160)
-                IconLbl.TextColor3 = Color3.fromRGB(150, 150, 160)
-            end
-            
-            tabData.Button:GetPropertyChangedSignal("TextColor3"):Connect(function()
-                if tabData.Button.TextColor3 == Color3.fromRGB(255, 255, 255) then
-                    IconLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-                else
-                    IconLbl.TextColor3 = Color3.fromRGB(150, 150, 160)
-                end
-            end)
-        end
-        
-        Title.Text = "DarkerSH"
-        
-        ProfileFrame.Visible = false
-    end
-    -- =============================================
 
     -- Hoşgeldin yazısını göster
     WelcomeText.Text = "Hoş Geldiniz, \n" .. tierName .. " Tanımlandı"
