@@ -778,10 +778,9 @@ StatusDate.Parent = StatusFrame
 -- 4'lü Ortadaki Büyük Kartlar
 local CardsContainer = Instance.new("Frame")
 CardsContainer.Size = UDim2.new(1, -20, 0, 110)
-CardsContainer.Position = UDim2.new(0, 10, 0, 75)
+CardsContainer.Position = UDim2.new(0, 10, 0, 60) -- Kartlar biraz yukarı taşındı
 CardsContainer.BackgroundTransparency = 1
 CardsContainer.Parent = ProHomeContainer
-
 local CardLayout = Instance.new("UIListLayout")
 CardLayout.FillDirection = Enum.FillDirection.Horizontal
 CardLayout.SortOrder = Enum.SortOrder.LayoutOrder
