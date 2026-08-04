@@ -763,14 +763,16 @@ StatusTitle.TextXAlignment = Enum.TextXAlignment.Left
 StatusTitle.Parent = StatusFrame
 
 local StatusDate = Instance.new("TextLabel")
-StatusDate.Name = "ProStatusAnimText" -- YENİ EKLENDİ
-StatusDate.Size = UDim2.new(1, -25, 0, 15)
+StatusDate.Name = "ProStatusAnimText" 
+StatusDate.Size = UDim2.new(1, -15, 0, 20) -- Genişletildi
 StatusDate.Position = UDim2.new(0, 10, 0, 25)
 StatusDate.BackgroundTransparency = 1
-StatusDate.Text = "Last Updated: Today" -- Animasyon başlayana kadar bu yazacak, sonra yerini animasyona bırakacak
+StatusDate.Text = "Last Updated: Today" 
 StatusDate.Font = Enum.Font.Gotham
 StatusDate.TextColor3 = Color3.fromRGB(120, 120, 130)
 StatusDate.TextSize = 10
+StatusDate.TextScaled = true -- YENİ: Taşan yazıyı kutuya sığdırır
+StatusDate.TextWrapped = true -- YENİ: Taştığında alt satıra/içe kırpar
 StatusDate.TextXAlignment = Enum.TextXAlignment.Left
 StatusDate.Parent = StatusFrame
 -- 4'lü Ortadaki Büyük Kartlar
@@ -789,22 +791,24 @@ CardLayout.Parent = CardsContainer
 local function CreateProCard(iconId, title, desc)
     local C = Instance.new("Frame")
     C.Size = UDim2.new(0.25, -7.5, 1, 0)
-    C.BackgroundColor3 = Color3.fromRGB(20, 15, 35)
+    C.BackgroundColor3 = Color3.fromRGB(20, 5, 35) -- Temaya uyumlu mor taban
+    C.BackgroundTransparency = 0.6 -- YENİ: Şık saydamlık
     Instance.new("UICorner", C).CornerRadius = UDim.new(0, 8)
     C.Parent = CardsContainer
     
     local CStroke = Instance.new("UIStroke")
-    CStroke.Color = Color3.fromRGB(255, 255, 255)
-    CStroke.Thickness = 1.5
+    CStroke.Color = Color3.fromRGB(138, 43, 226) -- Koyu mor/mor statik çizgi
+    CStroke.Transparency = 0.5 -- Yarı saydam zarif çerçeve
+    CStroke.Thickness = 1.2
     CStroke.Parent = C
-    ApplyChasingBorder(CStroke) -- Kovalayan Çizgi Eklendi
+    -- ApplyChasingBorder(CStroke) -> İPTAL EDİLDİ
 
     local Ico = Instance.new("ImageLabel")
-    Ico.Size = UDim2.new(0, 26, 0, 26)
-    Ico.Position = UDim2.new(0.5, -13, 0, 15)
+    Ico.Size = UDim2.new(0, 24, 0, 24)
+    Ico.Position = UDim2.new(0.5, -12, 0, 15)
     Ico.BackgroundTransparency = 1
     Ico.Image = iconId
-    Ico.ImageColor3 = Color3.fromRGB(138, 43, 226)
+    Ico.ImageColor3 = Color3.fromRGB(160, 80, 255)
     Ico.Parent = C
 
     local T = Instance.new("TextLabel")
@@ -823,17 +827,17 @@ local function CreateProCard(iconId, title, desc)
     D.BackgroundTransparency = 1
     D.Text = desc
     D.Font = Enum.Font.Gotham
-    D.TextColor3 = Color3.fromRGB(150, 150, 160)
+    D.TextColor3 = Color3.fromRGB(180, 180, 190)
     D.TextSize = 10
     D.TextWrapped = true
     D.Parent = C
 end
 
--- BURADAKİ rbxassetid:// LİNKLERİNİ KENDİ GÖRSELLERİNLE DEĞİŞTİREBİLİRSİN
-CreateProCard("rbxassetid://6023282396", "Powerful Features", "40+ built-in features to enhance your gameplay.")
-CreateProCard("rbxassetid://6022668888", "Safe & Secure", "Designed with security in mind. Stay undetected.")
-CreateProCard("rbxassetid://6023282396", "Performance", "Optimized for the best performance.")
-CreateProCard("rbxassetid://6022668888", "Customizable", "Customize the hub to your liking.")
+-- %100 Çalışan Yüksek Kaliteli İkon Seti (Lucide/Material)
+CreateProCard("rbxassetid://7733715400", "Powerful Features", "40+ built-in features to enhance your gameplay.")
+CreateProCard("rbxassetid://7733920644", "Safe & Secure", "Designed with security in mind. Stay undetected.")
+CreateProCard("rbxassetid://7734053426", "Performance", "Optimized for the best performance.")
+CreateProCard("rbxassetid://7734053495", "Customizable", "Customize the hub to your liking.")
 -- Quick Controls ve Information (Alt Kısım)
 local BottomContainer = Instance.new("Frame")
 BottomContainer.Size = UDim2.new(1, -20, 1, -240) -- Daha büyük, yukarı kaydı
@@ -991,15 +995,17 @@ end)
 local InfoFrame = Instance.new("Frame")
 InfoFrame.Size = UDim2.new(0.35, -5, 1, 0)
 InfoFrame.Position = UDim2.new(0.65, 10, 0, 0)
-InfoFrame.BackgroundColor3 = Color3.fromRGB(20, 15, 35)
+InfoFrame.BackgroundColor3 = Color3.fromRGB(20, 5, 35)
+InfoFrame.BackgroundTransparency = 0.6 -- YENİ: Temaya uygun saydamlık
 InfoFrame.ZIndex = 50
 Instance.new("UICorner", InfoFrame).CornerRadius = UDim.new(0, 8)
 InfoFrame.Parent = BottomContainer
 
 local InfoStroke = Instance.new("UIStroke", InfoFrame)
-InfoStroke.Color = Color3.fromRGB(255, 255, 255)
-InfoStroke.Thickness = 1.5
-ApplyChasingBorder(InfoStroke)
+InfoStroke.Color = Color3.fromRGB(138, 43, 226)
+InfoStroke.Transparency = 0.5
+InfoStroke.Thickness = 1.2
+-- ApplyChasingBorder(InfoStroke) -> İPTAL EDİLDİ
 
 local InfoTitle = Instance.new("TextLabel")
 InfoTitle.Size = UDim2.new(1, -20, 0, 25)
@@ -1274,9 +1280,9 @@ local ClickArea = Instance.new("TextButton")
     ClickArea.Parent = RowFrame
 
     -- KABA YAZI YERİNE ANİMASYONLU NOKTA (DOT) SİSTEMİ
-    local TierDot = Instance.new("Frame")
+   local TierDot = Instance.new("Frame")
     TierDot.Size = UDim2.new(0, 8, 0, 8)
-    TierDot.Position = UDim2.new(0, 10, 0.5, -4)
+    TierDot.Position = UDim2.new(0, 10, 0, 9) -- YENİ: Tam yazının hizasına sabitlendi
     TierDot.ZIndex = 5
     Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
     TierDot.Parent = RowFrame
@@ -1394,9 +1400,9 @@ local function CreateButton(parentContainer, name, description, minTier, default
     ClickArea.Parent = RowFrame
 
     -- KABA YAZI YERİNE ANİMASYONLU NOKTA (DOT) SİSTEMİ
-    local TierDot = Instance.new("Frame")
+   local TierDot = Instance.new("Frame")
     TierDot.Size = UDim2.new(0, 8, 0, 8)
-    TierDot.Position = UDim2.new(0, 10, 0.5, -4)
+    TierDot.Position = UDim2.new(0, 10, 0, 9) -- YENİ: Tam yazının hizasına sabitlendi
     TierDot.ZIndex = 5
     Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
     TierDot.Parent = RowFrame
@@ -2941,12 +2947,12 @@ IntroVerifyBtn.MouseButton1Click:Connect(function()
     elseif UserTierValue == 2 then
         -- PRO: Midnight Hub Görünümü (Dinamik Wave ve Chasing Borders)
         
-        -- ARKA PLAN WAVE GRADIENTİ GÜNCELLENİP AÇILIYOR
+        -- ARKA PLAN WAVE GRADIENTİ GÜNCELLENİP AÇILIYOR (Koyu Mor - Mor Geçişi)
         MainGradient.Enabled = true
         MainGradient.Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(8, 5, 12)),     -- Koyu Siyahımsı
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(35, 10, 50)), -- Koyu Mor
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 5, 12))
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 5, 40)),     -- Çok Koyu Mor
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(138, 43, 226)), -- Parlak Canlı Mor
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 5, 40))
         }
         
         -- Ana Çerçeveye de Kovalayan Çizgi Ekleniyor
