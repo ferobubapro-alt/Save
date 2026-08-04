@@ -885,10 +885,10 @@ QCGrid.Parent = QCGridContainer
 
 local function CreateQCToggle(name, callback)
     local F = Instance.new("TextButton") 
-    F.BackgroundColor3 = Color3.fromRGB(15, 12, 25)
+    F.BackgroundColor3 = Color3.fromRGB(18, 14, 33) -- Panel içi buton arka planı
     F.Text = ""
     F.AutoButtonColor = false
-    F.ZIndex = 60 -- Tıklama için katman yükseltildi
+    F.ZIndex = 60
     F.Active = true
     Instance.new("UICorner", F).CornerRadius = UDim.new(0, 6)
     F.Parent = QCGridContainer
@@ -898,8 +898,8 @@ local function CreateQCToggle(name, callback)
     T.Position = UDim2.new(0, 10, 0, 0)
     T.BackgroundTransparency = 1
     T.Text = name
-    T.Font = Enum.Font.Gotham
-    T.TextColor3 = Color3.fromRGB(200, 200, 200)
+    T.Font = Enum.Font.GothamMedium
+    T.TextColor3 = Color3.fromRGB(210, 210, 220)
     T.TextScaled = true 
     T.TextXAlignment = Enum.TextXAlignment.Left
     T.ZIndex = 61
@@ -910,15 +910,15 @@ local function CreateQCToggle(name, callback)
     UIPadding.PaddingBottom = UDim.new(0, 8)
 
     local Btn = Instance.new("Frame")
-    Btn.Size = UDim2.new(0, 30, 0, 15)
-    Btn.Position = UDim2.new(1, -40, 0.5, -7.5)
-    Btn.BackgroundColor3 = Color3.fromRGB(11, 9, 20) -- Tasarımdaki koyu toggle içi
+    Btn.Size = UDim2.new(0, 32, 0, 16)
+    Btn.Position = UDim2.new(1, -40, 0.5, -8)
+    Btn.BackgroundColor3 = Color3.fromRGB(35, 28, 55) -- Tasarımdaki Kapalı switch rengi
     Btn.ZIndex = 61
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(1, 0)
     Btn.Parent = F
 
     local Circ = Instance.new("Frame")
-    Circ.Size = UDim2.new(0, 11, 0, 11)
+    Circ.Size = UDim2.new(0, 12, 0, 12)
     Circ.Position = UDim2.new(0, 2, 0, 2)
     Circ.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
     Circ.ZIndex = 62
@@ -929,13 +929,15 @@ local function CreateQCToggle(name, callback)
     F.MouseButton1Click:Connect(function()
         toggled = not toggled
         if toggled then
-            TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(92, 36, 211)}):Play() -- Tasarımdaki Mor
-            TweenService:Create(Circ, TweenInfo.new(0.2), {Position = UDim2.new(1, -13, 0, 2), BackgroundColor3 = Color3.fromRGB(255,255,255)}):Play()
+            -- AÇILIŞ: Mor renk ve sağa kayma
+            TweenService:Create(Btn, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(138, 43, 226)}):Play() 
+            TweenService:Create(Circ, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(1, -14, 0, 2), BackgroundColor3 = Color3.fromRGB(255,255,255)}):Play()
         else
-            TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(11, 9, 20)}):Play() -- Tasarımdaki Koyu İç
+            -- KAPANIŞ: Koyu tema rengi ve sola kayma
+            TweenService:Create(Btn, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(35, 28, 55)}):Play() 
+            TweenService:Create(Circ, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 2, 0, 2), BackgroundColor3 = Color3.fromRGB(200,200,200)}):Play()
         end
         
-        -- DİNAMİK BİLDİRİM SİSTEMİ (TR/EN)
         local stateStr = toggled and ((currentLang == "TR") and "Açık" or "Enabled") or ((currentLang == "TR") and "Kapalı" or "Disabled")
         local localizedName = (currentLang == "TR") and (enToTr[name] or name) or name
         Notify(localizedName .. ": " .. stateStr)
@@ -943,19 +945,30 @@ local function CreateQCToggle(name, callback)
         if callback then pcall(function() callback(toggled) end) end
     end)
 end
-
--- Çalışan Hızlı Butonlar (Quick Controls)
+-- ===============================================
+-- GERÇEKTEN ÇALIŞAN HIZLI BUTON (QC) SCRİPTLERİ
+-- ===============================================
 CreateQCToggle("God Mode", function(state)
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-    if hum then hum.MaxHealth = state and math.huge or 100; hum.Health = state and math.huge or 100 end
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        if state then
+            char.Humanoid.MaxHealth = math.huge
+            char.Humanoid.Health = math.huge
+        else
+            char.Humanoid.MaxHealth = 100
+            char.Humanoid.Health = 100
+        end
+    end
 end)
 
 local InfJumpConn
 CreateQCToggle("Infinite Jump", function(state)
     if state then
         InfJumpConn = UserInputService.JumpRequest:Connect(function()
-            local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("Humanoid") then
+                char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
         end)
     else
         if InfJumpConn then InfJumpConn:Disconnect() InfJumpConn = nil end
@@ -963,8 +976,10 @@ CreateQCToggle("Infinite Jump", function(state)
 end)
 
 CreateQCToggle("Speed Hack", function(state)
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-    if hum then hum.WalkSpeed = state and 50 or 16 end
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.WalkSpeed = state and 50 or 16
+    end
 end)
 
 local QCNoclip
@@ -982,13 +997,93 @@ CreateQCToggle("Noclip", function(state)
     end
 end)
 
+-- KLASİK ROBLOX UÇMA SCRİPTİ (Kameraya göre yönlenen Fly)
+local QCFly, FlyGyro, FlyVel
 CreateQCToggle("Fly", function(state)
-    Workspace.Gravity = state and 0 or 196.2 
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if state and hrp then
+        char.Humanoid.PlatformStand = true
+        FlyGyro = Instance.new("BodyGyro", hrp)
+        FlyGyro.P = 9e4
+        FlyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        FlyGyro.CFrame = hrp.CFrame
+        
+        FlyVel = Instance.new("BodyVelocity", hrp)
+        FlyVel.Velocity = Vector3.new(0, 0, 0)
+        FlyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        
+        local cam = Workspace.CurrentCamera
+        local flySpeed = 50
+        
+        QCFly = RunService.RenderStepped:Connect(function()
+            if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Humanoid") then return end
+            
+            local ctrl = {f = 0, b = 0, l = 0, r = 0}
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then ctrl.f = 1 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then ctrl.b = -1 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then ctrl.l = -1 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then ctrl.r = 1 end
+            
+            FlyGyro.CFrame = cam.CFrame
+            local moveDir = (cam.CFrame.LookVector * (ctrl.f + ctrl.b)) + (cam.CFrame.RightVector * (ctrl.l + ctrl.r))
+            
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                moveDir = moveDir + Vector3.new(0, 1, 0)
+            elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                moveDir = moveDir + Vector3.new(0, -1, 0)
+            end
+            
+            FlyVel.Velocity = moveDir * flySpeed
+        end)
+    else
+        if QCFly then QCFly:Disconnect() QCFly = nil end
+        if FlyGyro then FlyGyro:Destroy() FlyGyro = nil end
+        if FlyVel then FlyVel:Destroy() FlyVel = nil end
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.PlatformStand = false
+        end
+    end
 end)
 
+-- MOR-KOYU MOR WAVE GRADIENT ESP (Klasik Highlight ESP)
+local QCESPConn
+local QCHighlightFolder = Instance.new("Folder")
+QCHighlightFolder.Name = "QCWavyESP"
+pcall(function() QCHighlightFolder.Parent = CoreGui end)
+
 CreateQCToggle("ESP", function(state)
-    Toggles.PlayerESP = state
-    UpdateESP()
+    if state then
+        QCESPConn = RunService.RenderStepped:Connect(function()
+            -- Renklerin Koyu Mordan -> Açık Mora dalgalanma formülü (Sine wave)
+            local timeCalc = tick() * 2
+            local r = math.clamp(math.sin(timeCalc) * 40 + 110, 70, 150) / 255 
+            local g = math.clamp(math.sin(timeCalc) * 10 + 20, 10, 30) / 255   
+            local b = math.clamp(math.sin(timeCalc) * 30 + 200, 170, 230) / 255 
+            local waveColor = Color3.new(r, g, b)
+
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    local hl = QCHighlightFolder:FindFirstChild(p.Name)
+                    if not hl then
+                        hl = Instance.new("Highlight")
+                        hl.Name = p.Name
+                        hl.Adornee = p.Character
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        hl.OutlineTransparency = 0.5
+                        hl.FillTransparency = 0.35
+                        hl.Parent = QCHighlightFolder
+                    end
+                    hl.Adornee = p.Character
+                    hl.FillColor = waveColor -- Renk her saniye dalgalanarak değişir
+                end
+            end
+        end)
+    else
+        if QCESPConn then QCESPConn:Disconnect() QCESPConn = nil end
+        for _, v in pairs(QCHighlightFolder:GetChildren()) do v:Destroy() end
+    end
 end)
 
 local InfoFrame = Instance.new("Frame")
@@ -2944,26 +3039,35 @@ IntroVerifyBtn.MouseButton1Click:Connect(function()
         Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
         
    elseif UserTierValue == 2 then
-        -- PRO: DarkerSH Görünümü (Birebir Tasarım Renkleri)
+        -- PRO: Birebir Tasarım Renkleri (Midnight Hub Mat Teması)
         
         -- ARKA PLAN WAVE GRADIENTİ GÜNCELLENİP AÇILIYOR
         MainGradient.Enabled = true
         MainGradient.Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(11, 9, 20)),      -- Görseldeki mat/koyu arka plan
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(28, 15, 45)),   -- Çok hafif koyu mor dalga
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(11, 9, 20)),      -- Ana koyu lacivert/siyah tonu
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(28, 15, 45)),   -- Hafif morumsu parlama (Wave Efekti)
             ColorSequenceKeypoint.new(1, Color3.fromRGB(11, 9, 20))
         }
         
-        -- Ana Çerçeveye de Kovalayan Çizgi Ekleniyor
+        -- Ana Çerçeveye Kovalayan Çizgi Ekleniyor
         ApplyChasingBorder(MainStroke)
 
-        MainFrame.BackgroundColor3 = Color3.fromRGB(11, 9, 20) -- Tasarımındaki ana koyu zemin
-        Sidebar.BackgroundColor3 = Color3.fromRGB(14, 11, 26)  -- Menüdeki hafif açık yan panel
-        TopBar.BackgroundColor3 = Color3.fromRGB(11, 9, 20)
+        -- Tasarımındaki Orijinal Renk Kodları
+        MainFrame.BackgroundColor3 = Color3.fromRGB(13, 11, 26) 
+        Sidebar.BackgroundColor3 = Color3.fromRGB(18, 14, 33)
+        TopBar.BackgroundColor3 = Color3.fromRGB(13, 11, 26)
         
         WelcomeTitle.Visible = false
         StatsFrame.Visible = false
         ProHomeContainer.Visible = true
+
+        -- PANELLERİN RENGİNİ DÜZELTME
+        for _, obj in pairs(ProHomeContainer:GetDescendants()) do
+            if obj:IsA("Frame") and (obj.BackgroundColor3 == Color3.fromRGB(20, 5, 35) or obj.BackgroundColor3 == Color3.fromRGB(20, 15, 35) or obj.BackgroundColor3 == Color3.fromRGB(23, 18, 43)) then
+                obj.BackgroundColor3 = Color3.fromRGB(24, 19, 43) -- İç panellerin daha açık/mat rengi
+                obj.BackgroundTransparency = 0 
+            end
+        end
         
         -- EMOJİLER YERİNE BURAYA İSTEDİĞİN İKON ID'LERİNİ YAZABİLİRSİN
         local tabIcons = {
