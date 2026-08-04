@@ -734,7 +734,7 @@ ProSub.Parent = ProHomeContainer
 -- Status Paneli (Sağ Üst)
 local StatusFrame = Instance.new("Frame")
 StatusFrame.Size = UDim2.new(0, 150, 0, 50)
-StatusFrame.Position = UDim2.new(1, -160, 0, 10)
+StatusFrame.Position = UDim2.new(1, -160, 0, 5) -- Y ekseni 10'dan 5'e çekilerek bir miktar yukarı taşındı
 StatusFrame.BackgroundColor3 = Color3.fromRGB(23, 18, 43)
 Instance.new("UICorner", StatusFrame).CornerRadius = UDim.new(0, 8)
 StatusFrame.Parent = ProHomeContainer
