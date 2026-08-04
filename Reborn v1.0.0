@@ -822,8 +822,8 @@ local function CreateProCard(iconId, title, desc)
     T.TextSize = 12
     T.Parent = C
 
-    local D = Instance.new("TextLabel")
-    D.Name = "DescLbl" -- YENİ (Bunu ekle)
+   local D = Instance.new("TextLabel")
+    D.Name = "DescLbl" 
     D.Size = UDim2.new(1, -10, 0, 40)
     D.Position = UDim2.new(0, 5, 0, 65)
     D.BackgroundTransparency = 1
@@ -831,9 +831,10 @@ local function CreateProCard(iconId, title, desc)
     D.Font = Enum.Font.Gotham
     D.TextColor3 = Color3.fromRGB(180, 180, 190)
     D.TextSize = 10
-    D.TextScaled = true -- YENİ: Dışarı taşmayı %100 engeller, kutuya sığdırır
+    D.TextScaled = true 
     D.TextWrapped = true
     D.Parent = C
+end -- İŞTE BURAYA END GELMELİ!
 
 -- %100 Çalışan Yüksek Kaliteli İkon Seti (Lucide/Material)
 CreateProCard("rbxassetid://7733715400", "Powerful Features", "40+ built-in features to enhance your gameplay.")
