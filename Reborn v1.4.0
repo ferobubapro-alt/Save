@@ -1,0 +1,3712 @@
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local VirtualUser = game:GetService("VirtualUser")
+local UserInputService = game:GetService("UserInputService")
+local Stats = game:GetService("Stats")
+local VerifyAndLoadMenu -- YENİ: Scriptin çökmesini engelleyen ana ön-tanımlama
+local LocalPlayer = Players.LocalPlayer
+while not LocalPlayer do
+Players.PlayerAdded:Wait()
+LocalPlayer = Players.LocalPlayer
+end
+
+-- Eski GUI temizliği
+pcall(function()
+if CoreGui:FindFirstChild("DarkerSH") then CoreGui.DarkerSH:Destroy() end
+if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("DarkerSH") then
+LocalPlayer.PlayerGui.DarkerSH:Destroy()
+end
+end)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DarkerSH"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.IgnoreGuiInset = true end) -- ÇÖKME ÖNLEYİCİ EKLENDİ (Eski exploitler için koruma)
+
+local success = pcall(function() ScreenGui.Parent = CoreGui end)
+if not success then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+local function MakeDraggable(gui, dragPart)
+dragPart = dragPart or gui
+local dragging, dragInput, dragStart, startPos
+dragPart.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+dragging = true
+dragStart = input.Position
+startPos = gui.Position
+input.Changed:Connect(function()
+if input.UserInputState == Enum.UserInputState.End then dragging = false end
+end)
+end
+end)
+dragPart.InputChanged:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+end)
+UserInputService.InputChanged:Connect(function(input)
+if input == dragInput and dragging then
+local delta = input.Position - dragStart
+gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+end)
+end
+
+local function MakeResizable(gui, minSizeX, minSizeY)
+local ResizeHandle = Instance.new("TextButton")
+ResizeHandle.Size = UDim2.new(0, 20, 0, 20)
+ResizeHandle.Position = UDim2.new(1, -20, 1, -20)
+ResizeHandle.BackgroundTransparency = 1
+ResizeHandle.Text = "◢"
+ResizeHandle.TextColor3 = Color3.fromRGB(200, 200, 200)
+ResizeHandle.TextSize = 14
+ResizeHandle.ZIndex = 50
+ResizeHandle.Parent = gui
+
+local dragging = false
+local dragStart, startSize
+
+ResizeHandle.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+dragging = true
+dragStart = input.Position
+startSize = gui.Size
+end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+local delta = input.Position - dragStart
+local newX = math.max(minSizeX, startSize.X.Offset + delta.X)
+local newY = math.max(minSizeY, startSize.Y.Offset + delta.Y)
+gui.Size = UDim2.new(0, newX, 0, newY)
+end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+dragging = false
+end
+end)
+return ResizeHandle
+end
+
+-- ==========================================
+-- BİLDİRİM (NOTIFICATION) SİSTEMİ
+-- ==========================================
+local NotifyContainer = Instance.new("Frame")
+NotifyContainer.Size = UDim2.new(0, 300, 1, 0)
+NotifyContainer.Position = UDim2.new(0.5, -150, 0, 15)
+NotifyContainer.BackgroundTransparency = 1
+NotifyContainer.ZIndex = 300
+NotifyContainer.Parent = ScreenGui
+
+local UIListLayoutNotify = Instance.new("UIListLayout")
+UIListLayoutNotify.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayoutNotify.Padding = UDim.new(0, 10)
+UIListLayoutNotify.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIListLayoutNotify.Parent = NotifyContainer
+
+local function Notify(text)
+local NotifFrame = Instance.new("Frame")
+NotifFrame.Size = UDim2.new(1, 0, 0, 40)
+NotifFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
+NotifFrame.BackgroundTransparency = 1
+NotifFrame.ZIndex = 301
+Instance.new("UICorner", NotifFrame).CornerRadius = UDim.new(0, 8)
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(138, 43, 226)
+UIStroke.Thickness = 1.5
+UIStroke.Transparency = 1
+UIStroke.Parent = NotifFrame
+
+local NotifText = Instance.new("TextLabel")
+NotifText.Size = UDim2.new(1, -20, 1, 0)
+NotifText.Position = UDim2.new(0, 10, 0, 0)
+NotifText.BackgroundTransparency = 1
+NotifText.Text = text
+NotifText.Font = Enum.Font.GothamBold
+NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
+NotifText.TextTransparency = 1
+NotifText.TextSize = 13
+NotifText.ZIndex = 302
+NotifText.Parent = NotifFrame
+NotifText.TextWrapped = true
+
+NotifFrame.Parent = NotifyContainer
+
+TweenService:Create(NotifFrame, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()
+TweenService:Create(UIStroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
+TweenService:Create(NotifText, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+
+task.delay(2.5, function()
+TweenService:Create(NotifFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+TweenService:Create(UIStroke, TweenInfo.new(0.3), {Transparency = 1}):Play()
+TweenService:Create(NotifText, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+task.wait(0.3)
+NotifFrame:Destroy()
+end)
+end
+-- ==========================================
+-- MODERN & DİNAMİK CROSSHAIR SİSTEMİ
+-- ==========================================
+local CrosshairContainer = Instance.new("Frame")
+CrosshairContainer.Size = UDim2.new(1, 0, 1, 0)
+CrosshairContainer.BackgroundTransparency = 1
+CrosshairContainer.Visible = false
+CrosshairContainer.ZIndex = 1000
+CrosshairContainer.Parent = ScreenGui
+
+local CenterDot = Instance.new("Frame")
+CenterDot.Size = UDim2.new(0, 4, 0, 4)
+CenterDot.Position = UDim2.new(0.5, -2, 0.5, -2)
+CenterDot.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+Instance.new("UICorner", CenterDot).CornerRadius = UDim.new(1, 0)
+CenterDot.Parent = CrosshairContainer
+
+-- Modern nişangah ikonu
+local OuterRing = Instance.new("ImageLabel")
+OuterRing.Size = UDim2.new(0, 40, 0, 40)
+OuterRing.Position = UDim2.new(0.5, -20, 0.5, -20)
+OuterRing.BackgroundTransparency = 1
+OuterRing.Image = "rbxassetid://133293265" 
+OuterRing.ImageColor3 = Color3.fromRGB(0, 255, 0)
+OuterRing.Parent = CrosshairContainer
+
+-- Crosshair Renk Güncellemesi ve Efekti
+local pulseDir = 1
+local pulseScale = 40
+RunService.RenderStepped:Connect(function()
+    if CrosshairContainer.Visible then
+        -- DarkerSH Tema Rengi (Koyu/Parlak Mor)
+        local themeColor = Color3.fromRGB(138, 43, 226) 
+        CenterDot.BackgroundColor3 = themeColor
+        OuterRing.ImageColor3 = themeColor
+        
+        -- Sürekli dönme ve nefes alma (Pulse) animasyonu
+        OuterRing.Rotation = OuterRing.Rotation + 3
+        
+        pulseScale = pulseScale + (0.4 * pulseDir)
+        if pulseScale > 46 then 
+            pulseDir = -1 
+        elseif pulseScale < 34 then 
+            pulseDir = 1 
+        end
+        
+        OuterRing.Size = UDim2.new(0, pulseScale, 0, pulseScale)
+        OuterRing.Position = UDim2.new(0.5, -pulseScale/2, 0.5, -pulseScale/2)
+    end
+end)
+-- ==========================================
+-- KEY & YETKİLENDİRME SİSTEMİ
+-- ==========================================
+local UserTierValue = -1 
+local TierNames = {[-1] = "Giriş Bekleniyor", [0] = "FREE", [1] = "LITE", [2] = "PRO"}
+-- ==========================================
+-- ==========================================
+-- ANA ARAYÜZ
+-- ==========================================
+local CurrentUIWindowSize = UDim2.new(0, 800, 0, 520) -- YENİ: Boyut hafızası
+local MainFrame = Instance.new("Frame")
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 45)
+MainFrame.Size = UDim2.new(0, 800, 0, 520)
+MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.ZIndex = 1
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+MakeResizable(MainFrame, 480, 420)
+
+local MainGradient = Instance.new("UIGradient")
+MainGradient.Color = ColorSequence.new{
+ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 10, 20)),
+ColorSequenceKeypoint.new(0.5, Color3.fromRGB(17, 17, 19)),
+ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 10, 35))
+}
+MainGradient.Rotation = 45
+MainGradient.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(255, 255, 255)
+MainStroke.Transparency = 0.5
+MainStroke.Thickness = 1.5
+MainStroke.Parent = MainFrame
+
+local waveTweenInfo = TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+TweenService:Create(MainGradient, waveTweenInfo, {Offset = Vector2.new(0.5, 0)}):Play()
+
+-- Üst Bar
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, -180, 0, 40)
+TopBar.Position = UDim2.new(0, 180, 0, 0)
+TopBar.BackgroundTransparency = 1
+TopBar.ZIndex = 5
+TopBar.Parent = MainFrame
+MakeDraggable(MainFrame, MainFrame)
+
+local SafeText = Instance.new("TextLabel")
+SafeText.Size = UDim2.new(0, 200, 1, 0)
+SafeText.Position = UDim2.new(1, -280, 0, 0)
+SafeText.BackgroundTransparency = 1
+SafeText.Text = "Safe, Fast, Undetected."
+SafeText.Font = Enum.Font.GothamBold
+SafeText.TextColor3 = Color3.fromRGB(100, 255, 100)
+SafeText.TextSize = 12
+SafeText.TextXAlignment = Enum.TextXAlignment.Right
+SafeText.ZIndex = 6
+SafeText.Parent = TopBar
+local animPhrases = {
+    {"Safe,", "Fast,", "Undetected."},
+    {"Optimized,", "Privileged,", "Humanized."},
+    {"Zero", "Detection,", "Bypass."},
+    {"24/7", "Support."}
+}
+
+task.spawn(function()
+    local phraseIndex = 1
+    while true do
+        local currentWords = animPhrases[phraseIndex]
+        local currentText = ""
+        SafeText.Text = ""
+        
+        for i, word in ipairs(currentWords) do
+            local prefix = (i == 1) and "" or " "
+            local wordToType = prefix .. word
+            
+            for j = 1, #wordToType do
+                currentText = currentText .. string.sub(wordToType, j, j)
+                SafeText.Text = currentText
+                
+                pcall(function()
+                    if ScreenGui:FindFirstChild("ProStatusAnimText", true) then
+                        ScreenGui:FindFirstChild("ProStatusAnimText", true).Text = currentText
+                    end
+                end)
+                
+                task.wait(0.04)
+            end
+            task.wait(0.5) -- KELİMELER ARASI BEKLEME SÜRESİ (EKLENDİ)
+        end -- İÇ DÖNGÜYÜ KAPATAN END (EKLENDİ, EKSİKTİ)
+        
+        task.wait(2.5)
+        phraseIndex = phraseIndex + 1
+        if phraseIndex > #animPhrases then phraseIndex = 1 end
+    end
+end)
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -40, 0, 5)
+CloseBtn.BackgroundTransparency = 1 -- Tamamen şeffaf arka plan
+CloseBtn.Text = "X"
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100) -- Varsayılan FREE/LITE Rengi
+CloseBtn.TextSize = 16
+CloseBtn.ZIndex = 6
+CloseBtn.Parent = TopBar
+
+local CloseGrad = Instance.new("UIGradient")
+CloseGrad.Name = "CloseGrad"
+CloseGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(138, 43, 226)), -- Mor
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(40, 10, 60)), -- Koyu Mor
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(138, 43, 226))
+}
+CloseGrad.Enabled = false -- Sadece PRO'da aktifleşecek
+CloseGrad.Parent = CloseBtn
+TweenService:Create(CloseGrad, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(1, 0)}):Play()
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -75, 0, 5)
+MinimizeBtn.BackgroundTransparency = 1 -- Tamamen şeffaf arka plan
+MinimizeBtn.Text = "-"
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255) -- Varsayılan FREE/LITE Rengi
+MinimizeBtn.TextSize = 22
+MinimizeBtn.ZIndex = 6
+MinimizeBtn.Parent = TopBar
+
+local MinGrad = Instance.new("UIGradient")
+MinGrad.Name = "MinGrad"
+MinGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(138, 43, 226)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(40, 10, 60)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(138, 43, 226))
+}
+MinGrad.Enabled = false -- Sadece PRO'da aktifleşecek
+MinGrad.Parent = MinimizeBtn
+TweenService:Create(MinGrad, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(1, 0)}):Play()
+
+local FloatingIcon = Instance.new("ImageButton")
+FloatingIcon.Name = "FloatingIcon"
+FloatingIcon.Size = UDim2.new(0, 60, 0, 60)
+FloatingIcon.Position = UDim2.new(0, 20, 0.5, -30)
+FloatingIcon.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+FloatingIcon.Image = "rbxassetid://126964821713679"
+FloatingIcon.Visible = false
+FloatingIcon.ZIndex = 500
+Instance.new("UICorner", FloatingIcon).CornerRadius = UDim.new(1, 0)
+FloatingIcon.Parent = ScreenGui
+
+local FIStroke = Instance.new("UIStroke")
+FIStroke.Color = Color3.fromRGB(255, 255, 255) -- UIGradient'in renklerini net vermesi için baz renk beyaz olmalı
+FIStroke.Thickness = 2.5
+FIStroke.Parent = FloatingIcon
+
+-- Siyah ve Koyu Mor geçişi
+local FIGradient = Instance.new("UIGradient")
+FIGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)), -- Siyah
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(70, 0, 130)), -- Koyu Mor
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0)) -- Siyah
+}
+FIGradient.Parent = FIStroke
+
+-- Çerçevenin etrafında birbirini kovalama (Dönme) animasyonu
+RunService.RenderStepped:Connect(function(dt)
+    if FloatingIcon.Visible then
+        FIGradient.Rotation = (FIGradient.Rotation + (dt * 120)) % 360
+    end
+end)
+
+MakeDraggable(FloatingIcon)
+
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+CurrentUIWindowSize = MainFrame.Size -- YENİ: Küçültmeden hemen önce manuel boyutu hafızaya alır
+TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play()
+task.wait(0.3)
+MainFrame.Visible = false
+FloatingIcon.Visible = true
+FloatingIcon.Size = UDim2.new(0, 0, 0, 0)
+TweenService:Create(FloatingIcon, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 60, 0, 60)}):Play()
+Notify("Menü küçültüldü.")
+end)
+
+FloatingIcon.MouseButton1Click:Connect(function()
+    TweenService:Create(FloatingIcon, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play()
+    task.wait(0.3)
+    FloatingIcon.Visible = false
+    MainFrame.Visible = true
+    MainFrame.Size = UDim2.new(0, 0, 0, 0)
+    TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = CurrentUIWindowSize}):Play() -- Hafızadaki boyutta açılır
+end)
+
+-- Yan Menü
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 180, 1, 0)
+Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 23)
+Sidebar.BorderSizePixel = 0
+Sidebar.ZIndex = 2
+Sidebar.Parent = MainFrame
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
+
+local LogoImage = Instance.new("ImageLabel")
+LogoImage.Size = UDim2.new(0, 90, 0, 90)
+LogoImage.Position = UDim2.new(0.5, -45, 0, 15)
+LogoImage.BackgroundTransparency = 1
+LogoImage.Image = "rbxassetid://126964821713679"
+LogoImage.ScaleType = Enum.ScaleType.Fit
+LogoImage.ZIndex = 3
+LogoImage.Parent = Sidebar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 20)
+Title.Position = UDim2.new(0, 0, 0, 110)
+Title.BackgroundTransparency = 1
+Title.Text = "DarkerSH"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextXAlignment = Enum.TextXAlignment.Center
+Title.ZIndex = 3
+Title.Parent = Sidebar
+
+-- Profil Kısmı
+local ProfileFrame = Instance.new("Frame")
+ProfileFrame.Size = UDim2.new(1, 0, 0, 65)
+ProfileFrame.Position = UDim2.new(0, 0, 1, -65)
+ProfileFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+ProfileFrame.ZIndex = 3
+Instance.new("UICorner", ProfileFrame).CornerRadius = UDim.new(0, 12)
+ProfileFrame.Parent = Sidebar
+
+local Avatar = Instance.new("ImageLabel")
+Avatar.Size = UDim2.new(0, 40, 0, 40)
+Avatar.Position = UDim2.new(0, 10, 0, 12)
+Avatar.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+Avatar.Image = "rbxthumb://type=AvatarHeadShot&id="..LocalPlayer.UserId.."&w=48&h=48"
+Avatar.ZIndex = 4
+Instance.new("UICorner", Avatar).CornerRadius = UDim.new(1, 0)
+Avatar.Parent = ProfileFrame
+
+local UserNameLbl = Instance.new("TextLabel")
+UserNameLbl.Size = UDim2.new(1, -60, 0, 20)
+UserNameLbl.Position = UDim2.new(0, 60, 0, 15)
+UserNameLbl.BackgroundTransparency = 1
+UserNameLbl.Text = LocalPlayer.Name
+UserNameLbl.Font = Enum.Font.GothamBold
+UserNameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+UserNameLbl.TextSize = 12
+UserNameLbl.TextXAlignment = Enum.TextXAlignment.Left
+UserNameLbl.ZIndex = 4
+UserNameLbl.Parent = ProfileFrame
+
+local TierBadge = Instance.new("Frame")
+TierBadge.Size = UDim2.new(0, 110, 0, 16) -- 90'dan 110'a çıkardık
+TierBadge.Position = UDim2.new(0, 60, 0, 35)
+TierBadge.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+TierBadge.ZIndex = 4
+Instance.new("UICorner", TierBadge).CornerRadius = UDim.new(0, 4)
+TierBadge.Parent = ProfileFrame
+
+local TierText = Instance.new("TextLabel")
+TierText.Size = UDim2.new(1, -4, 1, -4)
+TierText.Position = UDim2.new(0, 2, 0, 2)
+TierText.BackgroundTransparency = 1
+TierText.Text = TierNames[UserTierValue]
+TierText.Font = Enum.Font.GothamBold
+TierText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TierText.TextScaled = true -- Yazının kutu dışına taşmasını KESİNLİKLE engeller
+TierText.ZIndex = 5
+TierText.Parent = TierBadge
+
+-- ==========================================
+-- SEKMELER (TABS) SİSTEMİ
+-- ==========================================
+local TabContainer = Instance.new("ScrollingFrame")
+TabContainer.Size = UDim2.new(1, -10, 1, -210)
+TabContainer.Position = UDim2.new(0, 5, 0, 135)
+TabContainer.BackgroundTransparency = 1
+TabContainer.BorderSizePixel = 0
+TabContainer.ScrollBarThickness = 0
+TabContainer.ZIndex = 3
+TabContainer.Parent = Sidebar
+
+local TabListLayout = Instance.new("UIListLayout")
+TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabListLayout.Padding = UDim.new(0, 5)
+TabListLayout.Parent = TabContainer
+
+TabListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+TabContainer.CanvasSize = UDim2.new(0, 0, 0, TabListLayout.AbsoluteContentSize.Y + 10)
+end)
+
+local ContentContainer = Instance.new("Frame")
+ContentContainer.Size = UDim2.new(1, -195, 1, -50)
+ContentContainer.Position = UDim2.new(0, 190, 0, 45)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.ZIndex = 2
+ContentContainer.Parent = MainFrame
+
+local Tabs = {}
+local function CreateTab(name, isDefault, useGrid)
+local TabBtn = Instance.new("TextButton")
+TabBtn.Size = UDim2.new(1, -5, 0, 35)
+TabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+TabBtn.Text = name
+TabBtn.Font = Enum.Font.GothamBold
+TabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+TabBtn.TextSize = 13
+TabBtn.ZIndex = 3
+Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 8)
+TabBtn.Parent = TabContainer
+
+local TabPage = Instance.new("ScrollingFrame")
+TabPage.Size = UDim2.new(1, 0, 1, 0)
+TabPage.BackgroundTransparency = 1
+TabPage.BorderSizePixel = 0
+TabPage.ScrollBarThickness = 4
+TabPage.Visible = isDefault
+TabPage.ZIndex = 2
+TabPage.Parent = ContentContainer
+
+if useGrid then
+local PageLayout = Instance.new("UIGridLayout")
+PageLayout.CellSize = UDim2.new(0, 290, 0, 230)
+PageLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
+PageLayout.Parent = TabPage
+
+PageLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+TabPage.CanvasSize = UDim2.new(0, 0, 0, PageLayout.AbsoluteContentSize.Y + 20)
+end)
+end
+
+Tabs[name] = {Button = TabBtn, Page = TabPage}
+
+TabBtn.MouseButton1Click:Connect(function()
+    for tName, tabData in pairs(Tabs) do
+        if tName == name then
+            if not tabData.Page.Visible then
+                tabData.Page.Position = UDim2.new(-1, 0, 0, 0)
+                tabData.Page.Visible = true
+                TweenService:Create(tabData.Page, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+            end
+            
+            if UserTierValue == 2 then
+                -- PRO İÇİN PARLAYAN YAZI EFEKTİ (Arka plan şeffaf, Yazı gradient)
+                tabData.Button.BackgroundTransparency = 1
+                if tabData.Button:FindFirstChild("TabWaveGradient") then
+                    tabData.Button.TabWaveGradient.Enabled = true
+                end
+            else
+                tabData.Button.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+                tabData.Button.BackgroundTransparency = 0
+                tabData.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+            end
+        else
+            tabData.Page.Visible = false
+            if UserTierValue == 2 then
+                -- PRO İÇİN PASİF DURUM
+                tabData.Button.BackgroundTransparency = 1
+                if tabData.Button:FindFirstChild("TabWaveGradient") then
+                    tabData.Button.TabWaveGradient.Enabled = false
+                end
+                tabData.Button.TextColor3 = Color3.fromRGB(150, 150, 160)
+            else
+                tabData.Button.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+                tabData.Button.BackgroundTransparency = 0
+                tabData.Button.TextColor3 = Color3.fromRGB(200, 200, 200)
+            end
+        end
+    end
+end)
+
+if isDefault then
+    TabBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+    TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+end
+
+return TabPage
+end
+-- ==========================================
+-- SEKME TANIMLAMALARI
+-- ==========================================
+local HomeTab = CreateTab("Ana Menü", true, false)
+local FarmTab = CreateTab("Farm", false, true)
+local PlayerTab = CreateTab("Oyuncu", false, true)
+local CombatTab = CreateTab("Savaş", false, true)
+local VisualTab = CreateTab("Görsel", false, true)
+local TeleportTab = CreateTab("Işınlanma", false, true)
+local AITab = CreateTab("Groq AI", false, false)
+local SettingsTab = CreateTab("Ayarlar", false, true)
+
+-- ==========================================
+-- ANA MENÜ (HOME) TASARIMI VE İSTATİSTİKLER
+-- ==========================================
+local WelcomeTitle = Instance.new("TextLabel")
+WelcomeTitle.Size = UDim2.new(1, 0, 0, 40)
+WelcomeTitle.Position = UDim2.new(0, 0, 0, 10)
+WelcomeTitle.BackgroundTransparency = 1
+WelcomeTitle.Text = "Dominate MM2 With Our Soft-Ware"
+WelcomeTitle.Font = Enum.Font.GothamBlack
+WelcomeTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+WelcomeTitle.TextSize = 22
+WelcomeTitle.ZIndex = 3
+WelcomeTitle.Parent = HomeTab
+
+local StatsFrame = Instance.new("Frame")
+StatsFrame.Size = UDim2.new(1, -20, 0, 200)
+StatsFrame.Position = UDim2.new(0, 10, 0, 70)
+StatsFrame.BackgroundTransparency = 1
+StatsFrame.ZIndex = 3
+StatsFrame.Parent = HomeTab
+
+local StatsGrid = Instance.new("UIGridLayout")
+StatsGrid.CellSize = UDim2.new(0, 185, 0, 80)
+StatsGrid.CellPadding = UDim2.new(0, 10, 0, 10)
+StatsGrid.Parent = StatsFrame
+
+local function CreateStatCard(title, initialValue)
+local Card = Instance.new("Frame")
+Card.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 8)
+Card.ZIndex = 4
+Card.Parent = StatsFrame
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(138, 43, 226)
+Stroke.Parent = Card
+
+local T = Instance.new("TextLabel")
+T.Size = UDim2.new(1, 0, 0, 30)
+T.Position = UDim2.new(0, 0, 0, 10)
+T.BackgroundTransparency = 1
+T.Text = title
+T.Font = Enum.Font.GothamBold
+T.TextColor3 = Color3.fromRGB(180, 180, 180)
+T.TextSize = 12
+T.ZIndex = 5
+T.Parent = Card
+
+local V = Instance.new("TextLabel")
+V.Size = UDim2.new(1, 0, 0, 30)
+V.Position = UDim2.new(0, 0, 0, 35)
+V.BackgroundTransparency = 1
+V.Text = initialValue
+V.Font = Enum.Font.GothamBlack
+V.TextColor3 = Color3.fromRGB(255, 255, 255)
+V.TextSize = 16
+V.ZIndex = 5
+V.Parent = Card
+return V
+end
+
+local FpsVal = CreateStatCard("FPS", "60")
+local PingVal = CreateStatCard("GECİKME (PING)", "0 ms")
+local RegionVal = CreateStatCard("SUNUCU LOKASYON", "Yükleniyor...")
+local TimeVal = CreateStatCard("OYUN SÜRESİ", "00:00")
+local FriendVal = CreateStatCard("ARKADAŞ DURUMU", "Yok")
+
+-- Gerçek Sunucu Lokasyonu için API İsteği
+local RealRegion = "Yükleniyor..."
+task.spawn(function()
+    local req = (syn and syn.request) or request or http_request or nil
+    if req then
+        pcall(function()
+            -- IP üzerinden gerçek sunucu/istemci lokasyonunu çeker
+            local response = req({Url = "http://ip-api.com/json/", Method = "GET"})
+            if response and response.Body then
+                local data = game:GetService("HttpService"):JSONDecode(response.Body)
+                if data and data.country and data.city then
+                    RealRegion = data.country .. " (" .. data.city .. ")"
+                end
+            end
+        end)
+    else
+        RealRegion = "Bilinmiyor (API Desteklenmiyor)"
+    end
+end)
+
+local StartTime = os.time()
+RunService.RenderStepped:Connect(function(dt)
+    if HomeTab.Visible then
+        -- dt (DeltaTime) kullanarak Gerçek İstemci (Client) FPS'ini net olarak hesaplar
+        FpsVal.Text = tostring(math.floor(1 / dt)) .. " FPS"
+        
+        -- Gerçek Ping Değeri (Hata vermemesi için pcall ile korundu)
+        local ping = 0
+        pcall(function() ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue() end)
+        PingVal.Text = tostring(math.floor(ping)) .. " ms"
+        
+        -- Dinamik çekilen gerçek lokasyon
+        RegionVal.Text = RealRegion
+
+        local passed = os.time() - StartTime
+        local mins = math.floor(passed / 60)
+        local secs = passed % 60
+        TimeVal.Text = string.format("%02d:%02d", mins, secs)
+
+        local hasFriend = false
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and LocalPlayer:IsFriendsWith(p.UserId) then
+                hasFriend = true; break
+            end
+        end
+        FriendVal.Text = hasFriend and "Sunucuda Arkadaş Var" or "Yok"
+    end
+end)
+-- ==========================================
+-- BİRBİRİNİ KOVALAYAN ÇİZGİ (CHASING BORDER) SİSTEMİ
+-- ==========================================
+local chasingStrokes = {}
+local function ApplyChasingBorder(targetStroke)
+    local Gradient = Instance.new("UIGradient")
+    Gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 5, 25)), -- Koyu Siyahımsı Mor
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 32, 240)), -- Parlak Mor
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 5, 25))
+    }
+    Gradient.Parent = targetStroke
+    table.insert(chasingStrokes, Gradient)
+end
+
+RunService.RenderStepped:Connect(function(dt)
+    for _, grad in ipairs(chasingStrokes) do
+        if grad.Parent then
+            grad.Rotation = (grad.Rotation + (dt * 150)) % 360
+        end
+    end
+end)
+-- ==========================================
+-- PRO ARAYÜZ (DARKER HUB) ANA MENÜ TASARIMI
+-- ==========================================
+local ProHomeContainer = Instance.new("Frame")
+ProHomeContainer.Size = UDim2.new(1, 0, 1, 0)
+ProHomeContainer.BackgroundTransparency = 1
+ProHomeContainer.Visible = false -- Başlangıçta gizli, sadece PRO key girilince açılacak
+ProHomeContainer.ZIndex = 3
+ProHomeContainer.Parent = HomeTab
+
+-- Üst Başlıklar
+local ProWelcome = Instance.new("TextLabel")
+ProWelcome.Size = UDim2.new(0.6, 0, 0, 30)
+ProWelcome.Position = UDim2.new(0, 10, 0, 10)
+ProWelcome.BackgroundTransparency = 1
+ProWelcome.RichText = true -- Tasarımdaki gibi belirli kelimeyi renklendirmek için
+ProWelcome.Text = 'Welcome to <font color="rgb(157,78,221)">DarkerSH</font>'
+ProWelcome.Font = Enum.Font.GothamBlack
+ProWelcome.TextColor3 = Color3.fromRGB(255, 255, 255)
+ProWelcome.TextSize = 24 -- Tasarıma uygun biraz daha büyük
+ProWelcome.TextXAlignment = Enum.TextXAlignment.Left
+ProWelcome.Parent = ProHomeContainer
+
+local ProSub = Instance.new("TextLabel")
+ProSub.Size = UDim2.new(0.6, 0, 0, 20)
+ProSub.Position = UDim2.new(0, 10, 0, 35)
+ProSub.BackgroundTransparency = 1
+ProSub.Text = "Your all-in-one hub for dominating the game."
+ProSub.Font = Enum.Font.Gotham
+ProSub.TextColor3 = Color3.fromRGB(155, 152, 166) -- Tasarımdaki grimsi metin rengi
+ProSub.TextSize = 12
+ProSub.TextXAlignment = Enum.TextXAlignment.Left
+ProSub.Parent = ProHomeContainer
+
+-- Status Paneli (Sağ Üst)
+local StatusFrame = Instance.new("Frame")
+StatusFrame.Size = UDim2.new(0, 150, 0, 50)
+StatusFrame.Position = UDim2.new(1, -160, 0, 5) -- Y ekseni 10'dan 5'e çekilerek bir miktar yukarı taşındı
+StatusFrame.BackgroundColor3 = Color3.fromRGB(23, 18, 43)
+Instance.new("UICorner", StatusFrame).CornerRadius = UDim.new(0, 8)
+StatusFrame.Parent = ProHomeContainer
+
+local SStroke = Instance.new("UIStroke", StatusFrame)
+SStroke.Color = Color3.fromRGB(255, 255, 255)
+SStroke.Thickness = 1.5
+ApplyChasingBorder(SStroke) -- YENİ EKLENDİ
+
+local Dot = Instance.new("Frame")
+Dot.Size = UDim2.new(0, 8, 0, 8)
+Dot.Position = UDim2.new(0, 10, 0, 12)
+Dot.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+Instance.new("UICorner", Dot).CornerRadius = UDim.new(1, 0)
+Dot.Parent = StatusFrame
+
+local StatusTitle = Instance.new("TextLabel")
+StatusTitle.Size = UDim2.new(1, -25, 0, 15)
+StatusTitle.Position = UDim2.new(0, 25, 0, 8)
+StatusTitle.BackgroundTransparency = 1
+StatusTitle.Text = "Status: Undetected"
+StatusTitle.Font = Enum.Font.GothamBold
+StatusTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatusTitle.TextSize = 11
+StatusTitle.TextXAlignment = Enum.TextXAlignment.Left
+StatusTitle.Parent = StatusFrame
+
+local StatusDate = Instance.new("TextLabel")
+StatusDate.Name = "ProStatusAnimText" 
+StatusDate.Size = UDim2.new(1, -15, 0, 20) -- Genişletildi
+StatusDate.Position = UDim2.new(0, 10, 0, 25)
+StatusDate.BackgroundTransparency = 1
+StatusDate.Text = "Last Updated: Today" 
+StatusDate.Font = Enum.Font.Gotham
+StatusDate.TextColor3 = Color3.fromRGB(120, 120, 130)
+StatusDate.TextSize = 10
+StatusDate.TextScaled = true -- YENİ: Taşan yazıyı kutuya sığdırır
+StatusDate.TextWrapped = true -- YENİ: Taştığında alt satıra/içe kırpar
+StatusDate.TextXAlignment = Enum.TextXAlignment.Left
+StatusDate.Parent = StatusFrame
+-- 4'lü Ortadaki Büyük Kartlar
+local CardsContainer = Instance.new("Frame")
+CardsContainer.Size = UDim2.new(1, -20, 0, 110)
+CardsContainer.Position = UDim2.new(0, 10, 0, 60) -- Kartlar biraz yukarı taşındı
+CardsContainer.BackgroundTransparency = 1
+CardsContainer.Parent = ProHomeContainer
+local CardLayout = Instance.new("UIListLayout")
+CardLayout.FillDirection = Enum.FillDirection.Horizontal
+CardLayout.SortOrder = Enum.SortOrder.LayoutOrder
+CardLayout.Padding = UDim.new(0, 10)
+CardLayout.Parent = CardsContainer
+
+local function CreateProCard(iconId, title, desc)
+    local C = Instance.new("Frame")
+    C.Size = UDim2.new(0.25, -7.5, 1, 0)
+    C.BackgroundColor3 = Color3.fromRGB(23, 18, 43) 
+    C.BackgroundTransparency = 0 
+    Instance.new("UICorner", C).CornerRadius = UDim.new(0, 10)
+    C.Parent = CardsContainer
+    
+    local CStroke = Instance.new("UIStroke")
+    CStroke.Color = Color3.fromRGB(157, 78, 221) 
+    CStroke.Transparency = 0.8 
+    CStroke.Thickness = 1.2
+    CStroke.Parent = C
+
+    local Ico = Instance.new("ImageLabel")
+    Ico.Size = UDim2.new(0, 20, 0, 20) -- Küçük ekran için optimize edildi
+    Ico.Position = UDim2.new(0.5, -10, 0, 10)
+    Ico.BackgroundTransparency = 1
+    Ico.Image = iconId
+    Ico.ImageColor3 = Color3.fromRGB(160, 80, 255)
+    Ico.Parent = C
+
+   local T = Instance.new("TextLabel")
+    T.Name = "TitleLbl" 
+    T.Size = UDim2.new(1, -6, 0, 15) -- Genişlik ve yükseklik düzeltildi
+    T.Position = UDim2.new(0, 3, 0, 35)
+    T.BackgroundTransparency = 1
+    T.Text = title
+    T.Font = Enum.Font.GothamBold
+    T.TextColor3 = Color3.fromRGB(255, 255, 255)
+    T.TextScaled = true -- YENİ: İç içe girmeyi önler
+    T.Parent = C
+
+   local D = Instance.new("TextLabel")
+    D.Name = "DescLbl" 
+    D.Size = UDim2.new(1, -6, 1, -55) -- Kalan tüm alanı kaplayacak şekilde ayarlandı
+    D.Position = UDim2.new(0, 3, 0, 50)
+    D.BackgroundTransparency = 1
+    D.Text = desc
+    D.Font = Enum.Font.Gotham
+    D.TextColor3 = Color3.fromRGB(180, 180, 190)
+    D.TextScaled = true -- YENİ: İç içe girmeyi önler
+    D.TextWrapped = true
+    D.TextYAlignment = Enum.TextYAlignment.Top
+    D.Parent = C
+end -- İŞTE BURAYA END GELMELİ!
+
+-- %100 Çalışan Yüksek Kaliteli İkon Seti (Lucide/Material)
+CreateProCard("rbxassetid://7733715400", "Powerful Features", "40+ built-in features to enhance your gameplay.")
+CreateProCard("rbxassetid://7733920644", "Safe & Secure", "Designed with security in mind. Stay undetected.")
+CreateProCard("rbxassetid://7734053426", "Performance", "Optimized for the best performance.")
+CreateProCard("rbxassetid://7734053495", "Customizable", "Customize the hub to your liking.")
+-- Quick Controls ve Information (Alt Kısım)
+local BottomContainer = Instance.new("Frame")
+BottomContainer.Size = UDim2.new(1, -20, 1, -240) -- Daha büyük, yukarı kaydı
+BottomContainer.Position = UDim2.new(0, 10, 0, 185) -- Daha yukarı taşıdık
+BottomContainer.BackgroundTransparency = 1
+BottomContainer.ZIndex = 50 -- Tıklama düzeltmesi
+BottomContainer.Parent = ProHomeContainer
+
+local QCFrame = Instance.new("Frame")
+QCFrame.Size = UDim2.new(0.65, -5, 1, 0)
+QCFrame.BackgroundColor3 = Color3.fromRGB(23, 18, 43)
+QCFrame.ZIndex = 50
+Instance.new("UICorner", QCFrame).CornerRadius = UDim.new(0, 8)
+QCFrame.Parent = BottomContainer
+
+local QCStroke = Instance.new("UIStroke", QCFrame)
+QCStroke.Color = Color3.fromRGB(255, 255, 255)
+QCStroke.Thickness = 1.5
+ApplyChasingBorder(QCStroke)
+
+local QCTitle = Instance.new("TextLabel")
+QCTitle.Size = UDim2.new(1, -20, 0, 25)
+QCTitle.Position = UDim2.new(0, 10, 0, 5)
+QCTitle.BackgroundTransparency = 1
+QCTitle.Text = "Quick Controls"
+QCTitle.Font = Enum.Font.GothamBold
+QCTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+QCTitle.TextSize = 12
+QCTitle.TextXAlignment = Enum.TextXAlignment.Left
+QCTitle.ZIndex = 51
+QCTitle.Parent = QCFrame
+
+local QCGridContainer = Instance.new("Frame")
+QCGridContainer.Size = UDim2.new(1, -20, 1, -35)
+QCGridContainer.Position = UDim2.new(0, 10, 0, 30)
+QCGridContainer.BackgroundTransparency = 1
+QCGridContainer.ZIndex = 51
+QCGridContainer.Parent = QCFrame
+
+local QCGrid = Instance.new("UIGridLayout")
+QCGrid.CellSize = UDim2.new(0.48, 0, 0, 35)
+QCGrid.CellPadding = UDim2.new(0.04, 0, 0, 8)
+QCGrid.SortOrder = Enum.SortOrder.LayoutOrder
+QCGrid.Parent = QCGridContainer
+
+local function CreateQCToggle(name, callback)
+    local F = Instance.new("TextButton") 
+    F.BackgroundColor3 = Color3.fromRGB(18, 14, 33) -- Panel içi buton arka planı
+    F.Text = ""
+    F.AutoButtonColor = false
+    F.ZIndex = 60
+    F.Active = true
+    Instance.new("UICorner", F).CornerRadius = UDim.new(0, 6)
+    F.Parent = QCGridContainer
+    
+   local T = Instance.new("TextLabel")
+    T.Size = UDim2.new(1, -45, 1, 0) -- YENİ: Yazının butonun üstüne taşmasını engeller
+    T.Position = UDim2.new(0, 10, 0, 0)
+    T.BackgroundTransparency = 1
+    T.Text = name
+    T.Font = Enum.Font.GothamMedium
+    T.TextColor3 = Color3.fromRGB(210, 210, 220)
+    T.TextScaled = true 
+    T.TextXAlignment = Enum.TextXAlignment.Left
+    T.ZIndex = 61
+    T.Parent = F
+    
+    local UIPadding = Instance.new("UIPadding", T)
+    UIPadding.PaddingTop = UDim.new(0, 8)
+    UIPadding.PaddingBottom = UDim.new(0, 8)
+
+    local Btn = Instance.new("Frame")
+    Btn.Size = UDim2.new(0, 32, 0, 16)
+    Btn.Position = UDim2.new(1, -40, 0.5, -8)
+    Btn.BackgroundColor3 = Color3.fromRGB(35, 28, 55) -- Tasarımdaki Kapalı switch rengi
+    Btn.ZIndex = 61
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(1, 0)
+    Btn.Parent = F
+
+    local Circ = Instance.new("Frame")
+    Circ.Size = UDim2.new(0, 12, 0, 12)
+    Circ.Position = UDim2.new(0, 2, 0, 2)
+    Circ.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+    Circ.ZIndex = 62
+    Instance.new("UICorner", Circ).CornerRadius = UDim.new(1, 0)
+    Circ.Parent = Btn
+    
+    local toggled = false
+    F.MouseButton1Click:Connect(function()
+        toggled = not toggled
+        if toggled then
+            -- AÇILIŞ: Mor renk ve sağa kayma
+            TweenService:Create(Btn, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(138, 43, 226)}):Play() 
+            TweenService:Create(Circ, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(1, -14, 0, 2), BackgroundColor3 = Color3.fromRGB(255,255,255)}):Play()
+        else
+            -- KAPANIŞ: Koyu tema rengi ve sola kayma
+            TweenService:Create(Btn, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(35, 28, 55)}):Play() 
+            TweenService:Create(Circ, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 2, 0, 2), BackgroundColor3 = Color3.fromRGB(200,200,200)}):Play()
+        end
+        
+        local stateStr = toggled and ((currentLang == "TR") and "Açık" or "Enabled") or ((currentLang == "TR") and "Kapalı" or "Disabled")
+        local localizedName = (currentLang == "TR") and (enToTr[name] or name) or name
+        Notify(localizedName .. ": " .. stateStr)
+        
+        if callback then pcall(function() callback(toggled) end) end
+    end)
+end
+-- ===============================================
+-- GERÇEKTEN ÇALIŞAN HIZLI BUTON (QC) SCRİPTLERİ
+-- ===============================================
+CreateQCToggle("God Mode", function(state)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        if state then
+            char.Humanoid.MaxHealth = math.huge
+            char.Humanoid.Health = math.huge
+        else
+            char.Humanoid.MaxHealth = 100
+            char.Humanoid.Health = 100
+        end
+    end
+end)
+
+local InfJumpConn
+CreateQCToggle("Infinite Jump", function(state)
+    if state then
+        InfJumpConn = UserInputService.JumpRequest:Connect(function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("Humanoid") then
+                char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end)
+    else
+        if InfJumpConn then InfJumpConn:Disconnect() InfJumpConn = nil end
+    end
+end)
+
+CreateQCToggle("Speed Hack", function(state)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.WalkSpeed = state and 50 or 16
+    end
+end)
+
+local QCNoclip
+CreateQCToggle("Noclip", function(state)
+    if state then
+        QCNoclip = RunService.Stepped:Connect(function()
+            if LocalPlayer.Character then
+                for _, p in pairs(LocalPlayer.Character:GetDescendants()) do
+                    if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end
+                end
+            end
+        end)
+    else
+        if QCNoclip then QCNoclip:Disconnect() QCNoclip = nil end
+    end
+end)
+
+-- KLASİK ROBLOX UÇMA SCRİPTİ (Kameraya göre yönlenen Fly)
+local QCFly, FlyGyro, FlyVel
+CreateQCToggle("Fly", function(state)
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if state and hrp then
+        char.Humanoid.PlatformStand = true
+        FlyGyro = Instance.new("BodyGyro", hrp)
+        FlyGyro.P = 9e4
+        FlyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        FlyGyro.CFrame = hrp.CFrame
+        
+        FlyVel = Instance.new("BodyVelocity", hrp)
+        FlyVel.Velocity = Vector3.new(0, 0, 0)
+        FlyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        
+        local cam = Workspace.CurrentCamera
+        local flySpeed = 50
+        
+        QCFly = RunService.RenderStepped:Connect(function()
+            if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Humanoid") then return end
+            
+            local ctrl = {f = 0, b = 0, l = 0, r = 0}
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then ctrl.f = 1 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then ctrl.b = -1 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then ctrl.l = -1 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then ctrl.r = 1 end
+            
+            FlyGyro.CFrame = cam.CFrame
+            local moveDir = (cam.CFrame.LookVector * (ctrl.f + ctrl.b)) + (cam.CFrame.RightVector * (ctrl.l + ctrl.r))
+            
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                moveDir = moveDir + Vector3.new(0, 1, 0)
+            elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                moveDir = moveDir + Vector3.new(0, -1, 0)
+            end
+            
+            FlyVel.Velocity = moveDir * flySpeed
+        end)
+    else
+        if QCFly then QCFly:Disconnect() QCFly = nil end
+        if FlyGyro then FlyGyro:Destroy() FlyGyro = nil end
+        if FlyVel then FlyVel:Destroy() FlyVel = nil end
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.PlatformStand = false
+        end
+    end
+end)
+
+-- MOR-KOYU MOR WAVE GRADIENT ESP (Klasik Highlight ESP)
+local QCESPConn
+local QCHighlightFolder = Instance.new("Folder")
+QCHighlightFolder.Name = "QCWavyESP"
+pcall(function() QCHighlightFolder.Parent = CoreGui end)
+
+CreateQCToggle("ESP", function(state)
+    if state then
+        QCESPConn = RunService.RenderStepped:Connect(function()
+            -- Renklerin Koyu Mordan -> Açık Mora dalgalanma formülü (Sine wave)
+            local timeCalc = tick() * 2
+            local r = math.clamp(math.sin(timeCalc) * 40 + 110, 70, 150) / 255 
+            local g = math.clamp(math.sin(timeCalc) * 10 + 20, 10, 30) / 255   
+            local b = math.clamp(math.sin(timeCalc) * 30 + 200, 170, 230) / 255 
+            local waveColor = Color3.new(r, g, b)
+
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    local hl = QCHighlightFolder:FindFirstChild(p.Name)
+                    if not hl then
+                        hl = Instance.new("Highlight")
+                        hl.Name = p.Name
+                        hl.Adornee = p.Character
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        hl.OutlineTransparency = 0.5
+                        hl.FillTransparency = 0.35
+                        hl.Parent = QCHighlightFolder
+                    end
+                    hl.Adornee = p.Character
+                    hl.FillColor = waveColor -- Renk her saniye dalgalanarak değişir
+                end
+            end
+        end)
+    else
+        if QCESPConn then QCESPConn:Disconnect() QCESPConn = nil end
+        for _, v in pairs(QCHighlightFolder:GetChildren()) do v:Destroy() end
+    end
+end)
+
+local InfoFrame = Instance.new("Frame")
+InfoFrame.Size = UDim2.new(0.35, -5, 1, 0)
+InfoFrame.Position = UDim2.new(0.65, 10, 0, 0)
+InfoFrame.BackgroundColor3 = Color3.fromRGB(23, 18, 43)
+InfoFrame.BackgroundTransparency = 0
+InfoFrame.ZIndex = 50
+Instance.new("UICorner", InfoFrame).CornerRadius = UDim.new(0, 8)
+InfoFrame.Parent = BottomContainer
+
+local InfoStroke = Instance.new("UIStroke", InfoFrame)
+InfoStroke.Color = Color3.fromRGB(138, 43, 226)
+InfoStroke.Transparency = 0.5
+InfoStroke.Thickness = 1.2
+-- ApplyChasingBorder(InfoStroke) -> İPTAL EDİLDİ
+
+local InfoTitle = Instance.new("TextLabel")
+InfoTitle.Size = UDim2.new(1, -20, 0, 25)
+InfoTitle.Position = UDim2.new(0, 10, 0, 5)
+InfoTitle.BackgroundTransparency = 1
+InfoTitle.Text = "Information"
+InfoTitle.Font = Enum.Font.GothamBold
+InfoTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+InfoTitle.TextSize = 12
+InfoTitle.TextXAlignment = Enum.TextXAlignment.Left
+InfoTitle.ZIndex = 51
+InfoTitle.Parent = InfoFrame
+
+local InfoDesc = Instance.new("TextLabel")
+InfoDesc.Size = UDim2.new(1, -20, 1, -70)
+InfoDesc.Position = UDim2.new(0, 10, 0, 35)
+InfoDesc.BackgroundTransparency = 1
+InfoDesc.Text = "DarkerSH is constantly updated with new features and improvements.\n\nJoin our community for support and updates!"
+InfoDesc.Font = Enum.Font.Gotham
+InfoDesc.TextColor3 = Color3.fromRGB(150, 150, 160)
+InfoDesc.TextSize = 11
+InfoDesc.TextWrapped = true
+InfoDesc.TextXAlignment = Enum.TextXAlignment.Left
+InfoDesc.TextYAlignment = Enum.TextYAlignment.Top
+InfoDesc.ZIndex = 51
+InfoDesc.Parent = InfoFrame
+
+local DiscordBtn = Instance.new("TextButton")
+DiscordBtn.Size = UDim2.new(1, -20, 0, 30)
+DiscordBtn.Position = UDim2.new(0, 10, 1, -45) -- Daha yukarı alındı
+DiscordBtn.BackgroundColor3 = Color3.fromRGB(92, 36, 211)
+DiscordBtn.Text = "Join Discord"
+DiscordBtn.Font = Enum.Font.GothamBold
+DiscordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DiscordBtn.TextSize = 12
+DiscordBtn.ZIndex = 60 -- Tıklama Düzeltmesi
+DiscordBtn.Active = true
+Instance.new("UICorner", DiscordBtn).CornerRadius = UDim.new(0, 6)
+DiscordBtn.Parent = InfoFrame
+
+DiscordBtn.MouseButton1Click:Connect(function()
+    local msg = (currentLang == "TR") and "Discord linki kopyalandı!" or "Discord link copied!"
+    Notify(msg)
+    pcall(function() setclipboard("https://discord.gg/NoDiscordYet!") end) -- Linki buraya eklersin
+end)
+
+-- Command Bar (En Alt)
+local CmdFrame = Instance.new("Frame")
+CmdFrame.Size = UDim2.new(1, -20, 0, 35)
+CmdFrame.Position = UDim2.new(0, 10, 1, -45) -- Tasarım olarak biraz daha aşağı çekildi (-55'ten -45'e)
+CmdFrame.BackgroundColor3 = Color3.fromRGB(23, 18, 43)
+CmdFrame.ZIndex = 50
+Instance.new("UICorner", CmdFrame).CornerRadius = UDim.new(0, 8)
+CmdFrame.Parent = ProHomeContainer
+
+local CmdStroke = Instance.new("UIStroke", CmdFrame)
+CmdStroke.Color = Color3.fromRGB(255, 255, 255)
+CmdStroke.Thickness = 1.5
+ApplyChasingBorder(CmdStroke)
+
+local CmdInput = Instance.new("TextBox")
+CmdInput.Size = UDim2.new(1, -100, 1, 0)
+CmdInput.Position = UDim2.new(0, 15, 0, 0)
+CmdInput.BackgroundTransparency = 1
+CmdInput.PlaceholderText = ">_ Type a command..."
+CmdInput.Text = ""
+CmdInput.Font = Enum.Font.Gotham
+CmdInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+CmdInput.TextSize = 11
+CmdInput.TextXAlignment = Enum.TextXAlignment.Left
+CmdInput.ClearTextOnFocus = false
+CmdInput.ZIndex = 60 
+CmdInput.Active = true
+CmdInput.Parent = CmdFrame
+
+local CmdExec = Instance.new("TextButton")
+CmdExec.Size = UDim2.new(0, 80, 0, 25)
+CmdExec.Position = UDim2.new(1, -85, 0, 5)
+CmdExec.BackgroundColor3 = Color3.fromRGB(92, 36, 211)
+CmdExec.Text = "▶ Execute"
+CmdExec.Font = Enum.Font.GothamBold
+CmdExec.TextColor3 = Color3.fromRGB(255, 255, 255)
+CmdExec.TextSize = 11
+CmdExec.ZIndex = 60 
+CmdExec.Active = true
+Instance.new("UICorner", CmdExec).CornerRadius = UDim.new(0, 6)
+CmdExec.Parent = CmdFrame
+
+-- GERÇEK KOD ÇALIŞTIRMA SİSTEMİ
+CmdExec.MouseButton1Click:Connect(function()
+    local text = CmdInput.Text
+    if text ~= "" then
+        local func, err = loadstring(text)
+        if func then
+            task.spawn(func)
+            local msg = (currentLang == "TR") and "Komut çalıştırıldı: " or "Executed: "
+            Notify(msg .. text)
+        else
+            local msg = (currentLang == "TR") and "Hata: " or "Error: "
+            Notify(msg .. tostring(err))
+        end
+        CmdInput.Text = ""
+    end
+end)
+-- ==========================================
+-- KART VE WIDGET SİSTEMİ
+-- ==========================================
+local FloatingWidgets = {}
+local FeatureElements = {} -- YENİ: Özellikleri yetkiye göre gizlemek için kullanacağız
+                              
+local function CreateCategoryCard(parentTab, titleText)
+local CardFrame = Instance.new("Frame")
+CardFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+CardFrame.ZIndex = 3
+CardFrame.Parent = parentTab
+Instance.new("UICorner", CardFrame).CornerRadius = UDim.new(0, 8)
+
+local CardGradient = Instance.new("UIGradient")
+CardGradient.Color = ColorSequence.new{
+ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 5, 40)),
+ColorSequenceKeypoint.new(0.5, Color3.fromRGB(60, 10, 90)),
+ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 5, 40))
+}
+CardGradient.Rotation = 45
+CardGradient.Parent = CardFrame
+
+TweenService:Create(CardGradient, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.5, 0)}):Play()
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(255, 255, 255)
+Stroke.Transparency = 0.7
+Stroke.Thickness = 1
+Stroke.Parent = CardFrame
+
+local TitleLbl = Instance.new("TextLabel")
+TitleLbl.Size = UDim2.new(1, -20, 0, 30)
+TitleLbl.Position = UDim2.new(0, 10, 0, 5)
+TitleLbl.BackgroundTransparency = 1
+TitleLbl.Text = string.upper(titleText)
+TitleLbl.Font = Enum.Font.GothamBlack
+TitleLbl.TextColor3 = Color3.fromRGB(138, 43, 226)
+TitleLbl.TextSize = 14
+TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+TitleLbl.ZIndex = 4
+TitleLbl.Parent = CardFrame
+
+local ItemContainer = Instance.new("ScrollingFrame")
+ItemContainer.Size = UDim2.new(1, -20, 1, -40)
+ItemContainer.Position = UDim2.new(0, 10, 0, 35)
+ItemContainer.BackgroundTransparency = 1
+ItemContainer.BorderSizePixel = 0
+ItemContainer.ScrollBarThickness = 2
+ItemContainer.ZIndex = 4
+ItemContainer.Parent = CardFrame
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ListLayout.Padding = UDim.new(0, 8)
+ListLayout.Parent = ItemContainer
+
+ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+ItemContainer.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 10)
+end)
+
+return ItemContainer
+end
+
+local function CreateQuickWidget(name, toggleCallback)
+if FloatingWidgets[name] then return end
+
+local Widget = Instance.new("Frame")
+Widget.Size = UDim2.new(0, 120, 0, 40)
+Widget.Position = UDim2.new(0.8, 0, 0.5, 0)
+Widget.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+Widget.ZIndex = 100
+Widget.Active = true
+Widget.Parent = ScreenGui
+Instance.new("UICorner", Widget).CornerRadius = UDim.new(0, 8)
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(255, 255, 255)
+UIStroke.Transparency = 0.6
+UIStroke.Thickness = 1
+UIStroke.Parent = Widget
+
+local Btn = Instance.new("TextButton")
+Btn.Size = UDim2.new(1, 0, 1, 0)
+Btn.BackgroundTransparency = 1
+Btn.Text = name
+Btn.Font = Enum.Font.GothamBold
+Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Btn.TextSize = 12
+Btn.TextWrapped = true
+Btn.ZIndex = 101
+Btn.Parent = Widget
+
+local LockBtn = Instance.new("TextButton")
+LockBtn.Size = UDim2.new(0, 25, 0, 25)
+LockBtn.Position = UDim2.new(1, -30, 0, -10)
+LockBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+LockBtn.Text = "🔓"
+LockBtn.ZIndex = 105
+LockBtn.Visible = false
+Instance.new("UICorner", LockBtn).CornerRadius = UDim.new(1, 0)
+LockBtn.Parent = Widget
+
+local ResizeHandle = nil
+pcall(function() 
+ResizeHandle = MakeResizable(Widget, 100, 40)
+ResizeHandle.Visible = false 
+end)
+
+MakeDraggable(Widget, Btn)
+FloatingWidgets[name] = Widget
+
+local isLocked = false
+local editMode = false
+
+LockBtn.MouseButton1Click:Connect(function()
+isLocked = not isLocked
+LockBtn.Text = isLocked and "🔒" or "🔓"
+LockBtn.BackgroundColor3 = isLocked and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+Widget.Active = not isLocked
+Notify(name .. (isLocked and " Widget Kitlendi!" or " Widget Kilidi Açıldı!"))
+end)
+
+local wIsPressed = false
+local wFired = false
+Btn.MouseButton1Down:Connect(function()
+if isLocked then return end
+wIsPressed = true; wFired = false
+task.delay(0.5, function()
+if wIsPressed and not wFired then
+wFired = true
+editMode = not editMode
+LockBtn.Visible = editMode
+if ResizeHandle then ResizeHandle.Visible = editMode end
+
+if editMode then
+TweenService:Create(Widget, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -Widget.AbsoluteSize.X/2, 0.5, -Widget.AbsoluteSize.Y/2)}):Play()
+UIStroke.Color = Color3.fromRGB(138, 43, 226)
+UIStroke.Transparency = 0
+Notify("Düzenleme Modu: Boyutu ayarlayabilir veya kitleyebilirsiniz.")
+else
+UIStroke.Color = Color3.fromRGB(255, 255, 255)
+UIStroke.Transparency = 0.6
+end
+end
+end)
+end)
+
+Btn.MouseButton1Up:Connect(function()
+wIsPressed = false
+if not wFired and not editMode then 
+toggleCallback()
+end
+end)
+Btn.MouseLeave:Connect(function() wIsPressed = false end)
+end
+
+local function RemoveQuickWidget(name)
+if FloatingWidgets[name] then
+FloatingWidgets[name]:Destroy()
+FloatingWidgets[name] = nil
+Notify(name .. " Hızlı Butonu Kaldırıldı.")
+end
+end
+
+local function CreateToggle(parentContainer, name, description, minTier, callback)
+    local RowFrame = Instance.new("Frame")
+    RowFrame.Size = UDim2.new(1, -5, 0, 45)
+    RowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    RowFrame.ZIndex = 4
+    RowFrame.Parent = parentContainer
+    Instance.new("UICorner", RowFrame).CornerRadius = UDim.new(0, 6)
+local ClickArea = Instance.new("TextButton")
+    ClickArea.Size = UDim2.new(1, 0, 1, 0)
+    ClickArea.BackgroundTransparency = 1
+    ClickArea.Text = ""
+    ClickArea.ZIndex = 15 
+    ClickArea.Parent = RowFrame
+
+    -- KABA YAZI YERİNE ANİMASYONLU NOKTA (DOT) SİSTEMİ
+  local TierDot = Instance.new("Frame")
+    TierDot.Size = UDim2.new(0, 8, 0, 8)
+    TierDot.Position = UDim2.new(0, 10, 0, 9) -- YENİ: Tam yazının hizasına sabitlendi
+    TierDot.ZIndex = 5
+    Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
+    TierDot.Parent = RowFrame
+
+    if minTier == 2 then
+        TierDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        local dotGrad = Instance.new("UIGradient")
+        dotGrad.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(138, 43, 226)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(40, 10, 60)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(138, 43, 226))
+        }
+        dotGrad.Parent = TierDot
+        task.spawn(function()
+            while task.wait(0.02) do
+                if dotGrad.Parent then dotGrad.Rotation = (dotGrad.Rotation + 5) % 360 else break end
+            end
+        end)
+    elseif minTier == 1 then
+        TierDot.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+    else
+        TierDot.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    end
+
+    local TitleLbl = Instance.new("TextLabel")
+    TitleLbl.Name = "TitleLbl"
+    TitleLbl.Size = UDim2.new(1, -100, 0, 20)
+    TitleLbl.Position = UDim2.new(0, 25, 0, 3) -- Yazı, noktaya daha yakın olması için 55'ten 25'e çekildi
+    TitleLbl.BackgroundTransparency = 1
+    TitleLbl.Text = name
+    TitleLbl.Font = Enum.Font.GothamBold
+    TitleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TitleLbl.TextSize = 12
+    TitleLbl.TextWrapped = true
+    TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLbl.ZIndex = 5
+    TitleLbl.Parent = RowFrame
+
+   local DescLbl = Instance.new("TextLabel")
+    DescLbl.Name = "DescLbl"
+    DescLbl.Size = UDim2.new(1, -60, 0, 15) -- YENİ: Butona çarpmasını önler
+    DescLbl.Position = UDim2.new(0, 10, 0, 22)
+    DescLbl.BackgroundTransparency = 1
+    DescLbl.Text = description
+    DescLbl.Font = Enum.Font.Gotham
+    DescLbl.TextColor3 = Color3.fromRGB(150, 150, 150)
+    DescLbl.TextScaled = true -- YENİ: Ekran küçülünce yazıyı dinamik küçültür
+    DescLbl.TextWrapped = true
+    DescLbl.TextXAlignment = Enum.TextXAlignment.Left
+    DescLbl.ZIndex = 5
+    DescLbl.Parent = RowFrame
+
+    local ToggleBtn = Instance.new("Frame")
+    ToggleBtn.Size = UDim2.new(0, 36, 0, 18)
+    ToggleBtn.Position = UDim2.new(1, -45, 0.5, -9)
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+    ToggleBtn.ZIndex = 5
+    Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
+    ToggleBtn.Parent = RowFrame
+
+    local Circle = Instance.new("Frame")
+    Circle.Size = UDim2.new(0, 14, 0, 14)
+    Circle.Position = UDim2.new(0, 2, 0, 2)
+    Circle.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+    Circle.ZIndex = 6
+    Instance.new("UICorner", Circle).CornerRadius = UDim.new(1, 0)
+    Circle.Parent = ToggleBtn
+
+    local toggled = false
+
+    local function FireToggle()
+        if UserTierValue < 0 then Notify("Önce Key giriniz!"); return end
+        if UserTierValue < minTier then Notify("Bu özellik " .. (minTier == 1 and "LITE" or "PRO") .. " yetkisi gerektirir!"); return end
+
+        toggled = not toggled
+        if toggled then
+            TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(138, 43, 226)}):Play()
+            TweenService:Create(Circle, TweenInfo.new(0.2), {Position = UDim2.new(1, -16, 0, 2), BackgroundColor3 = Color3.fromRGB(255,255,255)}):Play()
+        else
+            TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 50)}):Play()
+            TweenService:Create(Circle, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0, 2), BackgroundColor3 = Color3.fromRGB(200,200,200)}):Play()
+        end
+        pcall(function() callback(toggled) end)
+    end
+
+    local isPressed = false; local longPressFired = false
+    ClickArea.MouseButton1Down:Connect(function()
+        isPressed = true; longPressFired = false
+        task.delay(0.5, function()
+            if isPressed and not longPressFired then
+                longPressFired = true
+                if FloatingWidgets[name] then RemoveQuickWidget(name) else CreateQuickWidget(name, FireToggle); Notify(name .. " Hızlı Buton Eklendi!") end
+            end
+        end)
+    end)
+   ClickArea.MouseButton1Up:Connect(function() isPressed = false; if not longPressFired then FireToggle() end end)
+    ClickArea.MouseLeave:Connect(function() isPressed = false end)
+    
+    table.insert(FeatureElements, {UI = RowFrame, Tier = minTier}) -- YENİ EKLENDİ
+end
+
+local function CreateButton(parentContainer, name, description, minTier, defaultText, callback)
+    local RowFrame = Instance.new("Frame")
+    RowFrame.Size = UDim2.new(1, -5, 0, 45)
+    RowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    RowFrame.ZIndex = 4
+    RowFrame.Parent = parentContainer
+    Instance.new("UICorner", RowFrame).CornerRadius = UDim.new(0, 6)
+
+    local ClickArea = Instance.new("TextButton")
+    ClickArea.Size = UDim2.new(1, 0, 1, 0)
+    ClickArea.BackgroundTransparency = 1
+    ClickArea.Text = ""
+    ClickArea.ZIndex = 15 
+    ClickArea.Parent = RowFrame
+
+    -- KABA YAZI YERİNE ANİMASYONLU NOKTA (DOT) SİSTEMİ
+   local TierDot = Instance.new("Frame")
+    TierDot.Size = UDim2.new(0, 8, 0, 8)
+    TierDot.Position = UDim2.new(0, 10, 0, 9) -- YENİ: Tam yazının hizasına sabitlendi
+    TierDot.ZIndex = 5
+    Instance.new("UICorner", TierDot).CornerRadius = UDim.new(1, 0)
+    TierDot.Parent = RowFrame
+
+    if minTier == 2 then
+        TierDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        local dotGrad = Instance.new("UIGradient")
+        dotGrad.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(138, 43, 226)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(40, 10, 60)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(138, 43, 226))
+        }
+        dotGrad.Parent = TierDot
+        task.spawn(function()
+            while task.wait(0.02) do
+                if dotGrad.Parent then dotGrad.Rotation = (dotGrad.Rotation + 5) % 360 else break end
+            end
+        end)
+    elseif minTier == 1 then
+        TierDot.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+    else
+        TierDot.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    end
+
+    local TitleLbl = Instance.new("TextLabel")
+    TitleLbl.Name = "TitleLbl"
+    TitleLbl.Size = UDim2.new(1, -100, 0, 20)
+    TitleLbl.Position = UDim2.new(0, 25, 0, 3)
+    TitleLbl.BackgroundTransparency = 1
+    TitleLbl.Text = name
+    TitleLbl.Font = Enum.Font.GothamBold
+    TitleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TitleLbl.TextSize = 12
+    TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLbl.ZIndex = 5
+    TitleLbl.Parent = RowFrame
+
+   local DescLbl = Instance.new("TextLabel")
+    DescLbl.Name = "DescLbl"
+    DescLbl.Size = UDim2.new(1, -90, 0, 15)
+    DescLbl.Position = UDim2.new(0, 10, 0, 22)
+    DescLbl.BackgroundTransparency = 1
+    DescLbl.Text = description
+    DescLbl.Font = Enum.Font.Gotham
+    DescLbl.TextColor3 = Color3.fromRGB(150, 150, 150)
+    DescLbl.TextScaled = true -- YENİ: Taşmayı engeller
+    DescLbl.TextWrapped = true
+    DescLbl.TextXAlignment = Enum.TextXAlignment.Left
+    DescLbl.ZIndex = 5
+    DescLbl.Parent = RowFrame
+
+    local ActionBtnFrame = Instance.new("Frame")
+    ActionBtnFrame.Size = UDim2.new(0, 65, 0, 20)
+    ActionBtnFrame.Position = UDim2.new(1, -75, 0.5, -10)
+    ActionBtnFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+    ActionBtnFrame.ZIndex = 5
+    Instance.new("UICorner", ActionBtnFrame).CornerRadius = UDim.new(0, 6)
+    ActionBtnFrame.Parent = RowFrame
+
+    local ActionStroke = Instance.new("UIStroke")
+    ActionStroke.Color = Color3.fromRGB(138, 43, 226)
+    ActionStroke.Thickness = 1
+    ActionStroke.Parent = ActionBtnFrame
+
+    local ActionTxt = Instance.new("TextLabel")
+    ActionTxt.Size = UDim2.new(1, 0, 1, 0)
+    ActionTxt.BackgroundTransparency = 1
+    ActionTxt.Text = defaultText
+    ActionTxt.Font = Enum.Font.GothamBold
+    ActionTxt.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ActionTxt.TextSize = 10
+    ActionTxt.ZIndex = 6
+    ActionTxt.Parent = ActionBtnFrame
+
+    ClickArea.MouseButton1Click:Connect(function()
+        if UserTierValue < 0 then Notify("Önce Key giriniz!"); return end
+        if UserTierValue < minTier then Notify("Bu özellik " .. (minTier == 1 and "LITE" or "PRO") .. " gerektirir!"); return end
+
+        TweenService:Create(ActionBtnFrame, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(138, 43, 226)}):Play()
+        task.wait(0.1)
+        TweenService:Create(ActionBtnFrame, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(45, 45, 50)}):Play()
+        pcall(function() callback(ActionTxt) end)
+    end)
+      table.insert(FeatureElements, {UI = RowFrame, Tier = minTier}) -- YENİ EKLENDİ
+end
+-- ==========================================
+-- ÖZELLİKLER VE SEKMELER
+-- ==========================================
+local Toggles = {AutoCoin = false, AutoGun = false, AutoKill = false, AntiAFK = false, SafeMode = false, PlayerESP = false, MurdererESP = false, SheriffESP = false, ShootMurderer = false}
+
+-- === FARM SEKMESİ ===
+local FarmCard = CreateCategoryCard(FarmTab, "Otomatik Kasılma (Farm)")
+
+CreateToggle(FarmCard, "Akıllı Altın Topla", "En yakındakine uçar, buga girmez.", 1, function(state)
+    Toggles.AutoCoin = state
+
+    if not state then
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.Anchored = false
+        end
+    end
+
+    task.spawn(function()
+        while Toggles.AutoCoin do
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
+                local hrp = char.HumanoidRootPart
+                local targetCoin = nil
+                local shortestDistance = math.huge
+
+                -- En yakın coini hesaplayan döngü
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v.Name == "Coin_Server" and v:IsA("BasePart") then
+                        local distance = (hrp.Position - v.Position).Magnitude
+                        if distance < shortestDistance then
+                            shortestDistance = distance
+                            targetCoin = v
+                        end
+                    end
+                end
+
+                if targetCoin then
+                    local dist = (hrp.Position - targetCoin.Position).Magnitude
+                    local timeToTravel = dist / 30 
+
+                    local tweenInfo = TweenInfo.new(timeToTravel, Enum.EasingStyle.Linear)
+                    local targetPos = targetCoin.CFrame * CFrame.new(0, 1.5, 0) 
+                    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetPos})
+
+                    hrp.Anchored = true
+                    tween:Play()
+
+                    while Toggles.AutoCoin and targetCoin.Parent and char.Humanoid.Health > 0 and tween.PlaybackState == Enum.PlaybackState.Playing do
+                        task.wait(0.05)
+                        if targetCoin and targetCoin.Parent then
+                            if firetouchinterest then
+                                firetouchinterest(hrp, targetCoin, 0)
+                                firetouchinterest(hrp, targetCoin, 1)
+                            end
+                        else
+                            tween:Cancel()
+                            break
+                        end
+                    end
+
+                    if tween then tween:Cancel() end
+                    hrp.Anchored = false
+                else
+                    task.wait(0.5)
+                end
+            else
+                task.wait(1)
+            end
+            task.wait(0.1)
+        end
+    end)
+end)
+CreateToggle(FarmCard, "Akıllı Silah Topla", "Silaha ışınlanıp eski yerine döner.", 0, function(state)
+Toggles.AutoGun = state
+while Toggles.AutoGun and task.wait(0.5) do
+pcall(function()
+local char = LocalPlayer.Character
+if char and char:FindFirstChild("HumanoidRootPart") then
+local hrp = char.HumanoidRootPart
+for _, v in pairs(Workspace:GetDescendants()) do
+if v.Name == "GunDrop" and v:IsA("BasePart") then
+local originalCFrame = hrp.CFrame
+hrp.CFrame = v.CFrame
+task.wait(0.2)
+hrp.CFrame = originalCFrame
+task.wait(1) 
+end
+end
+end
+end)
+end
+end)
+
+-- === SAVAŞ SEKMESİ ===
+local CombatCard = CreateCategoryCard(CombatTab, "Saldırı ve Savunma")
+local savedPositions = {}
+
+CreateToggle(CombatCard, "Otomatik Katlet", "Herkesi önüne çeker ve katleder.", 2, function(state)
+Toggles.AutoKill = state
+if state then
+savedPositions = {}
+for _, plr in pairs(Players:GetPlayers()) do
+if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+savedPositions[plr] = plr.Character.HumanoidRootPart.CFrame
+end
+end
+Notify("Herkes önüne getiriliyor...")
+
+task.spawn(function()
+while Toggles.AutoKill do
+local char = LocalPlayer.Character
+local knife = LocalPlayer.Backpack:FindFirstChild("Knife") or (char and char:FindFirstChild("Knife"))
+
+if char and char:FindFirstChild("HumanoidRootPart") then
+local myHrp = char.HumanoidRootPart
+if knife then
+if knife.Parent ~= char then knife.Parent = char end
+knife:Activate()
+end
+
+for _, plr in pairs(Players:GetPlayers()) do
+if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+local targetHrp = plr.Character.HumanoidRootPart
+local hum = plr.Character:FindFirstChild("Humanoid")
+if hum and hum.Health > 0 then
+targetHrp.CFrame = myHrp.CFrame * CFrame.new(0, 0, -3)
+end
+end
+end
+end
+task.wait(0.05)
+end
+end)
+else
+for plr, oldCFrame in pairs(savedPositions) do
+if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+plr.Character.HumanoidRootPart.CFrame = oldCFrame
+end
+end
+savedPositions = {}
+Notify("Katliam durduruldu, oyuncular geri bırakıldı.")
+end
+end)
+local AimbotConnection
+local AimbotSmoothness = 0.6 -- Pürüzsüz ama hedeften tam kopmayan, merkeze sabitleyen değer
+
+CreateToggle(CombatCard, "Katili Vur (Aimbot)", "Duvar arkasından bile katile pürüzsüz kilitlenir.", 2, function(state)
+    Toggles.ShootMurderer = state
+    local cam = Workspace.CurrentCamera
+
+    if state then
+        Notify("Aimbot Aktif: Katil duvar arkasında olsa bile hedefleniyor.")
+        
+        AimbotConnection = RunService.RenderStepped:Connect(function()
+            if not Toggles.ShootMurderer then return end
+            
+            local murderer = nil
+            
+            -- Katili Bul (Envanterinde veya karakterinde Knife olan kişi)
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character and (plr.Backpack:FindFirstChild("Knife") or plr.Character:FindFirstChild("Knife")) then
+                    local hum = plr.Character:FindFirstChild("Humanoid")
+                    if hum and hum.Health > 0 then
+                        murderer = plr
+                        break
+                    end
+                end
+            end
+
+            -- Eğer katil bulunduysa, ekranda/duvarda olmasına bakmaksızın doğrudan kilitlen
+            if murderer and murderer.Character and murderer.Character:FindFirstChild("Head") then
+                local targetPart = murderer.Character.Head
+                
+                -- Pürüzsüz Kamera Takibi (Katil hep merkezde kalır)
+                local targetCFrame = CFrame.lookAt(cam.CFrame.Position, targetPart.Position)
+                cam.CFrame = cam.CFrame:Lerp(targetCFrame, AimbotSmoothness)
+                
+                -- Kilitlendiği an Crosshair'i aç
+                if not CrosshairContainer.Visible then
+                    CrosshairContainer.Visible = true
+                    OuterRing.ImageTransparency = 1
+                    TweenService:Create(OuterRing, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                        ImageTransparency = 0
+                    }):Play()
+                end
+            else
+                -- Hedef ölürse veya katil yoksa crosshair'i kapat
+                if CrosshairContainer.Visible then
+                    CrosshairContainer.Visible = false
+                end
+            end
+        end)
+    else
+        if AimbotConnection then 
+            AimbotConnection:Disconnect() 
+            AimbotConnection = nil 
+        end
+        CrosshairContainer.Visible = false
+        Notify("Aimbot Kapatıldı.")
+    end
+end)
+local HitboxConnection
+CreateToggle(CombatCard, "Hitbox Expander", "Katilin ve Şerifin kafasını devasa yapar.", 1, function(state)
+if state then
+HitboxConnection = RunService.RenderStepped:Connect(function()
+for _, plr in pairs(Players:GetPlayers()) do
+if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
+local role = GetRole(plr)
+if role == "Murderer" or role == "Sheriff" then
+plr.Character.Head.Size = Vector3.new(10, 10, 10)
+plr.Character.Head.Transparency = 0.6
+plr.Character.Head.CanCollide = false
+else
+-- Masumları normale döndür
+plr.Character.Head.Size = Vector3.new(1.2, 1, 1)
+plr.Character.Head.Transparency = 0
+end
+end
+end
+end)
+Notify("Hitbox Expander Aktif.")
+else
+if HitboxConnection then HitboxConnection:Disconnect() HitboxConnection = nil end
+for _, plr in pairs(Players:GetPlayers()) do
+if plr.Character and plr.Character:FindFirstChild("Head") then
+plr.Character.Head.Size = Vector3.new(1.2, 1, 1)
+plr.Character.Head.Transparency = 0
+end
+end
+Notify("Hitboxlar normale döndü.")
+end
+end)
+-- === OYUNCU SEKMESİ ===
+local HareketCard = CreateCategoryCard(PlayerTab, "Hareket")
+local UtilityCard = CreateCategoryCard(PlayerTab, "Özel Güçler")
+
+local WalkSpeedGUI
+local CurrentSpeed = 50
+
+CreateToggle(HareketCard, "Hızlı Yürüme", "Yürüme hızını ayarlar ve yanda menü açar.", 0, function(state)
+local char = LocalPlayer.Character
+if not char or not char:FindFirstChild("Humanoid") then return end
+
+if state then
+char.Humanoid.WalkSpeed = CurrentSpeed
+
+if not CoreGui:FindFirstChild("SpeedSettingsMenu") then
+WalkSpeedGUI = Instance.new("ScreenGui")
+WalkSpeedGUI.Name = "SpeedSettingsMenu"
+pcall(function() WalkSpeedGUI.Parent = CoreGui end)
+if not WalkSpeedGUI.Parent then WalkSpeedGUI.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+local MenuFrame = Instance.new("Frame")
+MenuFrame.Size = UDim2.new(0, 150, 0, 100)
+MenuFrame.Position = UDim2.new(1, -170, 0.5, 75)
+MenuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 23)
+Instance.new("UICorner", MenuFrame).CornerRadius = UDim.new(0, 10)
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(255, 255, 255)
+Stroke.Transparency = 0.7
+Stroke.Thickness = 1
+Stroke.Parent = MenuFrame
+MenuFrame.Parent = WalkSpeedGUI
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "HIZ AYARLARI"
+Title.Font = Enum.Font.GothamBlack
+Title.TextColor3 = Color3.fromRGB(138, 43, 226)
+Title.Parent = MenuFrame
+
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(1, 0, 0, 30)
+SpeedLabel.Position = UDim2.new(0, 0, 0, 35)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "Hız: " .. CurrentSpeed
+SpeedLabel.Font = Enum.Font.GothamBold
+SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.Parent = MenuFrame
+
+local BtnMinus = Instance.new("TextButton")
+BtnMinus.Size = UDim2.new(0, 40, 0, 30)
+BtnMinus.Position = UDim2.new(0, 10, 0, 35)
+BtnMinus.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+BtnMinus.Text = "-"
+BtnMinus.TextColor3 = Color3.fromRGB(255, 100, 100)
+Instance.new("UICorner", BtnMinus).CornerRadius = UDim.new(0, 6)
+BtnMinus.Parent = MenuFrame
+
+local BtnPlus = Instance.new("TextButton")
+BtnPlus.Size = UDim2.new(0, 40, 0, 30)
+BtnPlus.Position = UDim2.new(1, -50, 0, 35)
+BtnPlus.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+BtnPlus.Text = "+"
+BtnPlus.TextColor3 = Color3.fromRGB(100, 255, 100)
+Instance.new("UICorner", BtnPlus).CornerRadius = UDim.new(0, 6)
+BtnPlus.Parent = MenuFrame
+
+BtnPlus.MouseButton1Down:Connect(function() 
+CurrentSpeed = CurrentSpeed + 5
+SpeedLabel.Text = "Hız: " .. CurrentSpeed
+if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+LocalPlayer.Character.Humanoid.WalkSpeed = CurrentSpeed
+end
+end)
+
+BtnMinus.MouseButton1Down:Connect(function() 
+CurrentSpeed = math.max(16, CurrentSpeed - 5)
+SpeedLabel.Text = "Hız: " .. CurrentSpeed
+if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+LocalPlayer.Character.Humanoid.WalkSpeed = CurrentSpeed
+end
+end)
+end
+else
+char.Humanoid.WalkSpeed = 16
+if WalkSpeedGUI then WalkSpeedGUI:Destroy() WalkSpeedGUI = nil end
+end
+end)
+
+local NoclipConnection
+CreateToggle(HareketCard, "Noclip", "Duvarların içinden geçersin.", 1, function(state)
+if state then
+NoclipConnection = RunService.Stepped:Connect(function()
+if LocalPlayer.Character then
+for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+if part:IsA("BasePart") and part.CanCollide then
+part.CanCollide = false
+end
+end
+end
+end)
+else
+if NoclipConnection then NoclipConnection:Disconnect() NoclipConnection = nil end
+end
+end)
+
+local FlyConnection, FlyGUI
+local FlySpeed = 50
+local flying = false
+local IdleAnimTrack, MoveAnimTrack = nil, nil
+
+CreateToggle(HareketCard, "Pürüzsüz Uçuş (Fly)", "Premium animasyon destekli Fly.", 1, function(state)
+flying = state
+local char = LocalPlayer.Character
+if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Humanoid") then return end
+local hrp = char.HumanoidRootPart
+local hum = char.Humanoid
+
+local function StopFly()
+flying = false
+hum.PlatformStand = false 
+hum.AutoRotate = true
+
+if FlyConnection then FlyConnection:Disconnect() FlyConnection = nil end
+if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end
+if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end
+if FlyGUI then FlyGUI:Destroy() FlyGUI = nil end
+
+if IdleAnimTrack then IdleAnimTrack:Stop() IdleAnimTrack:Destroy() IdleAnimTrack = nil end
+if MoveAnimTrack then MoveAnimTrack:Stop() MoveAnimTrack:Destroy() MoveAnimTrack = nil end
+end
+
+if flying then
+hum.PlatformStand = true 
+hum.AutoRotate = false
+
+if UserTierValue >= 2 then
+local animator = hum:FindFirstChildOfClass("Animator")
+if animator then
+local idleAnim = Instance.new("Animation")
+idleAnim.AnimationId = "rbxassetid://123349905320515"
+IdleAnimTrack = animator:LoadAnimation(idleAnim)
+IdleAnimTrack.Priority = Enum.AnimationPriority.Action 
+
+local moveAnim = Instance.new("Animation")
+moveAnim.AnimationId = "rbxassetid://115250948577308"
+MoveAnimTrack = animator:LoadAnimation(moveAnim)
+MoveAnimTrack.Priority = Enum.AnimationPriority.Action
+
+IdleAnimTrack:Play()
+end
+end
+
+local bv = Instance.new("BodyVelocity")
+bv.Name = "FlyBV"
+bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+bv.Velocity = Vector3.new(0, 0, 0)
+bv.Parent = hrp
+
+local bg = Instance.new("BodyGyro")
+bg.Name = "FlyBG"
+bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+bg.P = 9e4
+bg.CFrame = hrp.CFrame
+bg.Parent = hrp
+
+if not CoreGui:FindFirstChild("FlySettingsMenu") then
+FlyGUI = Instance.new("ScreenGui")
+FlyGUI.Name = "FlySettingsMenu"
+pcall(function() FlyGUI.Parent = CoreGui end)
+if not FlyGUI.Parent then FlyGUI.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+local MenuFrame = Instance.new("Frame")
+MenuFrame.Size = UDim2.new(0, 150, 0, 130)
+MenuFrame.Position = UDim2.new(1, -170, 0.5, -65) 
+MenuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 23)
+Instance.new("UICorner", MenuFrame).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", MenuFrame).Color = Color3.fromRGB(138, 43, 226)
+MenuFrame.Parent = FlyGUI
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "FLY AYARLARI"
+Title.Font = Enum.Font.GothamBlack
+Title.TextColor3 = Color3.fromRGB(138, 43, 226)
+Title.Parent = MenuFrame
+
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(1, 0, 0, 30)
+SpeedLabel.Position = UDim2.new(0, 0, 0, 35)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "Hız: " .. FlySpeed
+SpeedLabel.Font = Enum.Font.GothamBold
+SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.Parent = MenuFrame
+
+local BtnMinus = Instance.new("TextButton")
+BtnMinus.Size = UDim2.new(0, 40, 0, 30)
+BtnMinus.Position = UDim2.new(0, 10, 0, 35)
+BtnMinus.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+BtnMinus.Text = "-"
+BtnMinus.Font = Enum.Font.GothamBold
+BtnMinus.TextColor3 = Color3.fromRGB(255, 100, 100)
+Instance.new("UICorner", BtnMinus).CornerRadius = UDim.new(0, 6)
+BtnMinus.Parent = MenuFrame
+
+local BtnPlus = Instance.new("TextButton")
+BtnPlus.Size = UDim2.new(0, 40, 0, 30)
+BtnPlus.Position = UDim2.new(1, -50, 0, 35)
+BtnPlus.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+BtnPlus.Text = "+"
+BtnPlus.Font = Enum.Font.GothamBold
+BtnPlus.TextColor3 = Color3.fromRGB(100, 255, 100)
+Instance.new("UICorner", BtnPlus).CornerRadius = UDim.new(0, 6)
+BtnPlus.Parent = MenuFrame
+
+local BtnClose = Instance.new("TextButton")
+BtnClose.Size = UDim2.new(1, -20, 0, 35)
+BtnClose.Position = UDim2.new(0, 10, 0, 80)
+BtnClose.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+BtnClose.Text = "UÇMAYI KAPAT"
+BtnClose.Font = Enum.Font.GothamBold
+BtnClose.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", BtnClose).CornerRadius = UDim.new(0, 6)
+BtnClose.Parent = MenuFrame
+
+BtnPlus.MouseButton1Down:Connect(function() FlySpeed = FlySpeed + 10; SpeedLabel.Text = "Hız: "..FlySpeed end)
+BtnMinus.MouseButton1Down:Connect(function() FlySpeed = math.max(10, FlySpeed - 10); SpeedLabel.Text = "Hız: "..FlySpeed end)
+BtnClose.MouseButton1Down:Connect(function() StopFly() end)
+end
+
+FlyConnection = RunService.RenderStepped:Connect(function()
+if char and char:FindFirstChild("Humanoid") and hrp:FindFirstChild("FlyBV") then
+local cam = Workspace.CurrentCamera
+local moveDir = char.Humanoid.MoveDirection
+
+if moveDir.Magnitude > 0 then
+local flatLook = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z).Unit
+local flatRight = Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z).Unit
+local forwardInput = flatLook:Dot(moveDir)
+local rightInput = flatRight:Dot(moveDir)
+local moveVector = (cam.CFrame.LookVector * forwardInput) + (cam.CFrame.RightVector * rightInput)
+hrp.FlyBV.Velocity = moveVector * FlySpeed
+
+if IdleAnimTrack and IdleAnimTrack.IsPlaying then IdleAnimTrack:Stop() end
+if MoveAnimTrack and not MoveAnimTrack.IsPlaying then MoveAnimTrack:Play() end
+else
+hrp.FlyBV.Velocity = Vector3.new(0, 0, 0)
+if MoveAnimTrack and MoveAnimTrack.IsPlaying then MoveAnimTrack:Stop() end
+if IdleAnimTrack and not IdleAnimTrack.IsPlaying then IdleAnimTrack:Play() end
+end
+hrp.FlyBG.CFrame = cam.CFrame
+end
+end)
+else
+StopFly()
+end
+end)
+
+local safeIsHiding = false
+local safePos = nil
+local safePlatform = nil -- Havada üzerinde yürüyeceğin zemin
+
+CreateToggle(UtilityCard, "Güvenli Mod", "Havaya gizli zemin kurarak tehlikeden kaçar.", 1, function(state)
+    Toggles.SafeMode = state
+    
+    -- Eğer hile aniden kapatılırsa platformu sil ve karakteri geri indir
+    if not state then
+        if safePlatform then safePlatform:Destroy() safePlatform = nil end
+        if safeIsHiding and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = safePos
+        end
+        safeIsHiding = false
+    end
+
+    while Toggles.SafeMode and task.wait(0.1) do
+        pcall(function()
+            local char = LocalPlayer.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            local hrp = char.HumanoidRootPart
+
+            local flyingKnifeDanger = false
+            for _, v in pairs(Workspace:GetChildren()) do
+                if v.Name == "Knife" and v:IsA("BasePart") and v.Velocity.Magnitude > 15 then
+                    if (hrp.Position - v.Position).Magnitude < 15 then
+                        flyingKnifeDanger = true
+                        break
+                    end
+                end
+            end
+
+            local murderer = nil
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character then
+                    if plr.Backpack:FindFirstChild("Knife") or plr.Character:FindFirstChild("Knife") then
+                        murderer = plr
+                        break
+                    end
+                end
+            end
+
+            local murdererDanger = false
+            local distFromTarget = math.huge
+
+            if murderer and murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart") then
+                local measurePos = safeIsHiding and safePos.Position or hrp.Position
+                distFromTarget = (measurePos - murderer.Character.HumanoidRootPart.Position).Magnitude
+                if distFromTarget < 20 then
+                    murdererDanger = true
+                end
+            end
+
+            if flyingKnifeDanger or murdererDanger then
+                if not safeIsHiding then
+                    safeIsHiding = true
+                    safePos = hrp.CFrame
+                    local targetSafeCFrame = hrp.CFrame + Vector3.new(0, 60, 0) -- Çok yukarı çıkıp bariyere takılmamak için 70'den 60'a düşürüldü
+                    
+                    -- Havada üzerinde durabileceğin görünmez bir zemin oluşturuyoruz
+                    if not safePlatform then
+                        safePlatform = Instance.new("Part")
+                        safePlatform.Size = Vector3.new(30, 1, 30)
+                        safePlatform.Position = targetSafeCFrame.Position - Vector3.new(0, 3.5, 0)
+                        safePlatform.Anchored = true
+                        safePlatform.Transparency = 1 -- Görünmez
+                        safePlatform.Parent = Workspace
+                    end
+                    
+                    hrp.CFrame = targetSafeCFrame
+                    Notify("TEHLİKE! Güvenli zemine kaçıldı.")
+                end
+            else
+                if safeIsHiding and distFromTarget > 35 and not flyingKnifeDanger then
+                    safeIsHiding = false
+                    -- Tehlike geçince zemini yok et
+                    if safePlatform then safePlatform:Destroy() safePlatform = nil end
+                    hrp.CFrame = safePos
+                    Notify("Tehlike geçti, geri dönüldü.")
+                end
+            end
+        end)
+    end
+end)
+
+local realChar, fakeChar, ghostPlatform
+
+CreateToggle(UtilityCard, "Hayalet Görünmezlik", "Gerçek bedeni 1000 stud yukarı gizler.", 2, function(state)
+if state then
+realChar = LocalPlayer.Character
+if realChar and realChar:FindFirstChild("HumanoidRootPart") then
+realChar.Archivable = true
+fakeChar = realChar:Clone()
+fakeChar.Name = "Ghost_" .. LocalPlayer.Name
+fakeChar.Parent = Workspace
+
+for _, v in pairs(fakeChar:GetDescendants()) do
+if (v:IsA("BasePart") or v:IsA("Decal")) and v.Name ~= "HumanoidRootPart" then
+v.Transparency = 0.5
+end
+end
+
+local realHrp = realChar:FindFirstChild("HumanoidRootPart")
+
+ghostPlatform = Instance.new("Part")
+ghostPlatform.Size = Vector3.new(20, 1, 20)
+ghostPlatform.Position = realHrp.Position + Vector3.new(0, 1000, 0)
+ghostPlatform.Anchored = true
+ghostPlatform.Transparency = 1
+ghostPlatform.Parent = Workspace
+
+realHrp.CFrame = ghostPlatform.CFrame + Vector3.new(0, 5, 0)
+
+LocalPlayer.Character = fakeChar
+Workspace.CurrentCamera.CameraSubject = fakeChar:FindFirstChild("Humanoid")
+Notify("Hayalet Modu AÇIK. Bedenin güvende.")
+end
+else
+if realChar and realChar:FindFirstChild("HumanoidRootPart") then
+local realHrp = realChar:FindFirstChild("HumanoidRootPart")
+if fakeChar and fakeChar:FindFirstChild("HumanoidRootPart") then
+realHrp.CFrame = fakeChar.HumanoidRootPart.CFrame
+end
+LocalPlayer.Character = realChar
+Workspace.CurrentCamera.CameraSubject = realChar:FindFirstChild("Humanoid")
+end
+if fakeChar then fakeChar:Destroy() end
+if ghostPlatform then ghostPlatform:Destroy() end
+Notify("Hayalet Modu KAPALI. Geri dönüldü.")
+end
+end)
+
+-- === GÖRSEL SEKMESİ (ESP) ===
+local VisualCard = CreateCategoryCard(VisualTab, "Oyuncu İzleme (ESP)")
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "DarkerSH_ESP"
+ESPFolder.Parent = CoreGui
+
+local function GetRole(player)
+if player.Backpack:FindFirstChild("Knife") or (player.Character and player.Character:FindFirstChild("Knife")) then return "Murderer" end
+if player.Backpack:FindFirstChild("Gun") or (player.Character and player.Character:FindFirstChild("Gun")) then return "Sheriff" end
+return "Innocent"
+end
+
+local function UpdateESP()
+for _, v in pairs(ESPFolder:GetChildren()) do v:Destroy() end
+
+for _, plr in pairs(Players:GetPlayers()) do
+if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Head") then
+local role = GetRole(plr)
+local shouldDraw = false
+local espColor = Color3.fromRGB(0, 255, 0) 
+local roleName = (currentLang == "TR") and "Masum" or "Innocent"
+
+if Toggles.PlayerESP then
+shouldDraw = true
+if role == "Murderer" then espColor = Color3.fromRGB(255, 0, 0); roleName = (currentLang == "TR") and "Katil" or "Murderer" end
+if role == "Sheriff" then espColor = Color3.fromRGB(0, 0, 255); roleName = (currentLang == "TR") and "Şerif" or "Sheriff" end
+elseif Toggles.MurdererESP and role == "Murderer" then
+shouldDraw = true
+espColor = Color3.fromRGB(255, 0, 0)
+roleName = (currentLang == "TR") and "Katil" or "Murderer"
+elseif Toggles.SheriffESP and role == "Sheriff" then
+shouldDraw = true
+espColor = Color3.fromRGB(0, 0, 255)
+roleName = (currentLang == "TR") and "Şerif" or "Sheriff"
+end
+
+if shouldDraw then
+-- Vücut Boyama
+local Highlight = Instance.new("Highlight")
+Highlight.Name = "HL_"..plr.Name
+Highlight.Adornee = plr.Character
+Highlight.FillColor = espColor
+Highlight.OutlineColor = Color3.new(1, 1, 1)
+Highlight.FillTransparency = 0.5
+Highlight.OutlineTransparency = 0.2
+Highlight.Parent = ESPFolder
+
+-- İsim ve Mesafe Yazısı (BillboardGui)
+local bgui = Instance.new("BillboardGui")
+bgui.Name = "TXT_"..plr.Name
+bgui.Adornee = plr.Character.Head
+bgui.Size = UDim2.new(0, 200, 0, 50)
+bgui.StudsOffset = Vector3.new(0, 2, 0)
+bgui.AlwaysOnTop = true
+bgui.Parent = ESPFolder
+
+local txt = Instance.new("TextLabel")
+txt.Size = UDim2.new(1, 0, 1, 0)
+txt.BackgroundTransparency = 1
+txt.Text = plr.Name .. "\n[" .. roleName .. "]"
+txt.Font = Enum.Font.GothamBold
+txt.TextSize = 10
+txt.TextColor3 = espColor
+txt.TextStrokeTransparency = 0
+txt.Parent = bgui
+end
+end
+end
+end
+
+RunService.RenderStepped:Connect(function()
+if Toggles.PlayerESP or Toggles.MurdererESP or Toggles.SheriffESP then
+-- Mesafe güncellemeleri
+if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+local myPos = LocalPlayer.Character.HumanoidRootPart.Position
+for _, bgui in pairs(ESPFolder:GetChildren()) do
+if bgui:IsA("BillboardGui") and bgui.Adornee and bgui.Adornee.Parent then
+local targetPlr = Players:GetPlayerFromCharacter(bgui.Adornee.Parent)
+if targetPlr then
+local dist = math.floor((myPos - bgui.Adornee.Position).Magnitude)
+local role = GetRole(targetPlr)
+local roleName = role
+if currentLang == "TR" then
+roleName = (role == "Murderer") and "Katil" or (role == "Sheriff" and "Şerif" or "Masum")
+end
+bgui.TextLabel.Text = targetPlr.Name .. " [" .. dist .. "m]\n[" .. roleName .. "]"
+end
+end
+end
+end
+else
+for _, v in pairs(ESPFolder:GetChildren()) do v:Destroy() end
+end
+end)
+
+-- Esp verilerini anlık yenilemek için 1 saniyelik döngü (Rol değişimleri için)
+task.spawn(function()
+while task.wait(1) do
+if Toggles.PlayerESP or Toggles.MurdererESP or Toggles.SheriffESP then
+UpdateESP()
+end
+end
+end)
+
+CreateToggle(VisualCard, "Tüm Oyuncular (Player ESP)", "İsim, Mesafe ve Rol Gösterir.", 1, function(state)
+Toggles.PlayerESP = state
+UpdateESP()
+end)
+CreateToggle(VisualCard, "Sadece Katil (Murderer ESP)", "Katili ve uzaklığını gösterir.", 0, function(state)
+Toggles.MurdererESP = state
+UpdateESP()
+end)
+CreateToggle(VisualCard, "Sadece Şerif (Sheriff ESP)", "Şerifi ve uzaklığını gösterir.", 0, function(state)
+Toggles.SheriffESP = state
+UpdateESP()
+end)
+-- === IŞINLANMA (TELEPORT) SEKMESİ ===
+local TeleportCard = CreateCategoryCard(TeleportTab, "Hızlı Işınlanma")
+
+-- Dinamik Harita Takip Sistemi (Aniden Işınlanma Algılayıcı)
+local dynamicMapPos = nil
+local lastPlayerPositions = {}
+
+task.spawn(function()
+    while task.wait(0.5) do
+        local inGameCount = 0
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local currentPos = p.Character.HumanoidRootPart.Position
+                local lastPos = lastPlayerPositions[p]
+                
+                -- Oyuncu yarım saniyede 100 stud'dan fazla uzağa gittiyse (ışınlandıysa)
+                if lastPos and (currentPos - lastPos).Magnitude > 100 and currentPos.Y > 0 then
+                    dynamicMapPos = currentPos -- Gittiği ilk yeri Harita olarak kaydet
+                end
+                
+                -- Lobi yüksekliğinin (yaklaşık 134) epey altında veya üstünde olanları (oyundakileri) say
+                if math.abs(currentPos.Y - 134) > 30 then
+                    inGameCount = inGameCount + 1
+                end
+                
+                lastPlayerPositions[p] = currentPos
+            else
+                lastPlayerPositions[p] = nil
+            end
+        end
+        
+        -- Eğer haritada kimse kalmadıysa (herkes öldü/lobiye döndüyse) pozisyonu sıfırla
+        if inGameCount == 0 then
+            dynamicMapPos = nil
+        end
+    end
+end)
+
+CreateButton(TeleportCard, "Lobiye Işınlan", "Bekleme salonuna (Lobby) geri dönersin.", 0, "GİT", function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        -- Yüksekteki bariyerlere takılmamak için Y seviyesi (138'den) 134'e düşürüldü
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-109, 134, 11)
+        Notify("Lobiye ışınlandın.")
+    end
+end)
+
+CreateButton(TeleportCard, "Haritaya Işınlan", "Oynanan haritanın ortasına gidersin.", 0, "GİT", function()
+    if dynamicMapPos and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        -- Haritaya giderken havadan düşmemek ve bariyere takılmamak için +5 offset +1.5 yapıldı
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(dynamicMapPos.X, dynamicMapPos.Y + 1.5, dynamicMapPos.Z)
+        Notify("Haritaya ışınlandın.")
+    else
+        Notify("Oyun şu an başlamamış veya harita bulunamadı!")
+    end
+end)
+
+CreateButton(TeleportCard, "Katile Işınlan", "Katilin tam arkasına ışınlanırsın.", 0, "GİT", function()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and GetRole(plr) == "Murderer" and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 4)
+                Notify("Katile ışınlandın!") return
+            end
+        end
+    end
+    Notify("Katil bulunamadı.")
+end)
+
+CreateButton(TeleportCard, "Şerife Işınlan", "Şerifin tam arkasına ışınlanırsın.", 0, "GİT", function()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and GetRole(plr) == "Sheriff" and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 4)
+                Notify("Şerife ışınlandın!") return
+            end
+        end
+    end
+    Notify("Şerif bulunamadı.")
+end)
+-- === GROQ AI SEKMESİ (DİNAMİK KODLAMA & SOHBET) ===
+-- === ASİSTAN AI SEKMESİ (YENİ SİSTEM) ===
+local HttpService = game:GetService("HttpService")
+local GroqAPIKey = "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"
+local aiMode = "Chat" 
+local aiMessageCount = 0 -- Kullanım kotası
+
+local AITopFrame = Instance.new("Frame")
+AITopFrame.Size = UDim2.new(1, -20, 0.45, 0)
+AITopFrame.Position = UDim2.new(0, 10, 0, 10)
+AITopFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+AITopFrame.ZIndex = 50 
+Instance.new("UICorner", AITopFrame).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", AITopFrame).Color = Color3.fromRGB(138, 43, 226)
+AITopFrame.Parent = AITab
+
+local AIResponseText = Instance.new("TextLabel")
+AIResponseText.Size = UDim2.new(1, -20, 1, -20)
+AIResponseText.Position = UDim2.new(0, 10, 0, 10)
+AIResponseText.BackgroundTransparency = 1
+AIResponseText.Text = "Merhaba, ben DarkerSH Asistanı. Size nasıl yardımcı olabilirim?"
+AIResponseText.Font = Enum.Font.GothamMedium
+AIResponseText.TextSize = 13
+AIResponseText.TextWrapped = true
+AIResponseText.TextXAlignment = Enum.TextXAlignment.Left
+AIResponseText.TextYAlignment = Enum.TextYAlignment.Top
+AIResponseText.TextColor3 = Color3.fromRGB(255, 255, 255)
+AIResponseText.ZIndex = 51
+AIResponseText.Parent = AITopFrame
+
+local TextGradient = Instance.new("UIGradient")
+TextGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(66, 133, 244)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(155, 114, 203)), ColorSequenceKeypoint.new(1, Color3.fromRGB(217, 101, 112))}
+TextGradient.Parent = AIResponseText
+TweenService:Create(TextGradient, TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(1, 0)}):Play()
+
+local ThinkingFrame = Instance.new("Frame")
+ThinkingFrame.Size = UDim2.new(0, 60, 0, 20)
+ThinkingFrame.Position = UDim2.new(0, 10, 0, 10)
+ThinkingFrame.BackgroundTransparency = 1
+ThinkingFrame.Visible = false
+ThinkingFrame.ZIndex = 51
+ThinkingFrame.Parent = AITopFrame
+
+local dots = {}
+for i = 1, 3 do
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.new(0, 8, 0, 8)
+    dot.Position = UDim2.new(0, (i-1)*15, 0.5, -4)
+    dot.BackgroundColor3 = Color3.fromRGB(155, 114, 203)
+    dot.ZIndex = 51
+    Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+    dot.Parent = ThinkingFrame
+    table.insert(dots, dot)
+end
+
+local AIMiddleFrame = Instance.new("Frame")
+AIMiddleFrame.Size = UDim2.new(1, -20, 0, 45)
+AIMiddleFrame.Position = UDim2.new(0, 10, 0.45, 20)
+AIMiddleFrame.BackgroundTransparency = 1
+AIMiddleFrame.ZIndex = 50
+AIMiddleFrame.Parent = AITab
+
+local AIInputBox = Instance.new("TextBox")
+AIInputBox.Size = UDim2.new(1, -90, 1, 0)
+AIInputBox.Position = UDim2.new(0, 0, 0, 0)
+AIInputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+AIInputBox.PlaceholderText = "Asistana komutunuzu yazın..."
+AIInputBox.Text = ""
+AIInputBox.Font = Enum.Font.Gotham
+AIInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+AIInputBox.TextSize = 12
+AIInputBox.ClearTextOnFocus = false
+AIInputBox.ZIndex = 55
+Instance.new("UICorner", AIInputBox).CornerRadius = UDim.new(0, 6)
+AIInputBox.Parent = AIMiddleFrame
+
+local AISendBtn = Instance.new("TextButton")
+AISendBtn.Size = UDim2.new(0, 80, 1, 0)
+AISendBtn.Position = UDim2.new(1, -80, 0, 0)
+AISendBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+AISendBtn.Text = "GÖNDER"
+AISendBtn.Font = Enum.Font.GothamBold
+AISendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AISendBtn.TextSize = 12
+AISendBtn.ZIndex = 55
+Instance.new("UICorner", AISendBtn).CornerRadius = UDim.new(0, 6)
+AISendBtn.Parent = AIMiddleFrame
+
+local AIBottomFrame = Instance.new("Frame")
+AIBottomFrame.Size = UDim2.new(1, -20, 0, 35)
+AIBottomFrame.Position = UDim2.new(0, 10, 0.45, 75)
+AIBottomFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+AIBottomFrame.ZIndex = 50
+Instance.new("UICorner", AIBottomFrame).CornerRadius = UDim.new(0, 6)
+AIBottomFrame.Parent = AITab
+
+local ModeToggleBtn = Instance.new("TextButton")
+ModeToggleBtn.Size = UDim2.new(0.5, -5, 1, -10)
+ModeToggleBtn.Position = UDim2.new(0, 5, 0, 5)
+ModeToggleBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+ModeToggleBtn.Text = "Sohbet Modu"
+ModeToggleBtn.Font = Enum.Font.GothamBold
+ModeToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ModeToggleBtn.TextSize = 11
+ModeToggleBtn.ZIndex = 55
+Instance.new("UICorner", ModeToggleBtn).CornerRadius = UDim.new(0, 4)
+ModeToggleBtn.Parent = AIBottomFrame
+
+local ModeDesc = Instance.new("TextLabel")
+ModeDesc.Size = UDim2.new(0.5, -10, 1, 0)
+ModeDesc.Position = UDim2.new(0.5, 5, 0, 0)
+ModeDesc.BackgroundTransparency = 1
+ModeDesc.Text = "Asistan sizinle sadece sohbet eder."
+ModeDesc.Font = Enum.Font.Gotham
+ModeDesc.TextColor3 = Color3.fromRGB(180, 180, 180)
+ModeDesc.TextSize = 10
+ModeDesc.TextXAlignment = Enum.TextXAlignment.Left
+ModeDesc.ZIndex = 51
+ModeDesc.Parent = AIBottomFrame
+
+ModeToggleBtn.MouseButton1Click:Connect(function()
+    if aiMode == "Chat" then
+        aiMode = "Code"
+        ModeToggleBtn.Text = (currentLang == "TR") and "Kod Modu" or "Code Mode"
+        ModeDesc.Text = (currentLang == "TR") and "Asistan anında hile komutlarını (ESP vs) çalıştırır." or "Assistant directly executes commands (ESP etc)."
+        ModeToggleBtn.BackgroundColor3 = Color3.fromRGB(217, 101, 112)
+    else
+        aiMode = "Chat"
+        ModeToggleBtn.Text = (currentLang == "TR") and "Sohbet Modu" or "Chat Mode"
+        ModeDesc.Text = (currentLang == "TR") and "Asistan sadece sohbet eder." or "Assistant chats normally."
+        ModeToggleBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+    end
+end)
+
+local function Typewrite(text)
+    AIResponseText.Text = ""
+    AIResponseText.Visible = true
+    for i = 1, #text do
+        AIResponseText.Text = string.sub(text, 1, i)
+        task.wait(0.015) 
+    end
+end
+
+local isThinking = false
+local function PlayThinkingAnimation()
+    isThinking = true
+    AIResponseText.Visible = false
+    ThinkingFrame.Visible = true
+    task.spawn(function()
+        while isThinking do
+            for i, dot in ipairs(dots) do
+                TweenService:Create(dot, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = UDim2.new(0, (i-1)*15, 0.5, -12)}):Play()
+                task.wait(0.15)
+                TweenService:Create(dot, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {Position = UDim2.new(0, (i-1)*15, 0.5, -4)}):Play()
+            end
+            task.wait(0.2)
+        end
+    end)
+end
+
+local function StopThinkingAnimation()
+    isThinking = false
+    ThinkingFrame.Visible = false
+end
+
+local function GetSystemContext()
+    local langIns = (currentLang == "TR") and "Kullanıcının seçtiği dil TÜRKÇE. Tüm cevaplarını ve diyaloglarını kesinlikle Türkçe vereceksin!" or "User language is ENGLISH. You must reply entirely in English!"
+    local basePrompt = "Sen DarkerSH adlı Roblox Exploit'inin entegre Asistanısın. " .. langIns .. " "
+
+    if aiMode == "Code" then
+        return basePrompt .. [[Kullanıcı senden oyunda doğrudan (ESP aç, uçmamı sağla, zıplat vb.) bir özellik istiyorsa, SADECE roblox'ta anında çalışacak yerel (LocalPlayer) scriptini ver. UI kodları ekleme. Ancak açıkça 'Bunu menüme özellik olarak ekle' derse CreateToggle kullanabilirsin. Kodu SADECE ```lua içine yaz. Başka sohbet etme.]]
+    else
+        return basePrompt .. "Sohbet modundasın. Çok kısa, samimi ve asistan gibi konuş. Kod yazma."
+    end
+end
+
+local function RequestDarkerAI(prompt)
+    local req = (syn and syn.request) or request or http_request or nil
+    if not req then
+        Typewrite((currentLang == "TR") and "Hata: Exploitiniz HTTP Request desteklemiyor!" or "Error: Your exploit doesn't support HTTP Requests!")
+        return
+    end
+
+    PlayThinkingAnimation()
+
+    task.spawn(function()
+        -- İstek atarken çökme olursa sistemi kitlememesi için pcall (hata yakalayıcı) ekledik.
+        local success, response = pcall(function()
+            return req({
+                Url = "https://api.groq.com/openai/v1/chat/completions", -- BOZUK LİNK BURADA DÜZELTİLDİ
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json", 
+                    ["Authorization"] = "Bearer " .. GroqAPIKey
+                },
+                Body = HttpService:JSONEncode({
+                    model = "llama-3.3-70b-versatile",
+                    messages = {
+                        {role = "system", content = GetSystemContext()}, 
+                        {role = "user", content = prompt}
+                    }
+                })
+            })
+        end)
+
+        StopThinkingAnimation()
+
+        if success and response and response.Success then
+            local data = HttpService:JSONDecode(response.Body)
+            
+            -- API'den gelen verinin boş olup olmadığını kontrol et
+            if data and data.choices and data.choices[1] then
+                local aiReply = data.choices[1].message.content
+
+                if aiMode == "Code" and aiReply:find("```lua") then
+                    local codeBlock = aiReply:match("```lua\n(.-)```") or aiReply:match("```lua(.-)```")
+                    if codeBlock then
+                        local func, err = loadstring(codeBlock)
+                        if func then
+                            task.spawn(func)
+                            Typewrite((currentLang == "TR") and "İstediğiniz komut başarıyla çalıştırıldı!" or "Your command was executed successfully!")
+                        else
+                            Typewrite((currentLang == "TR") and "Hata oluştu: " .. tostring(err) or "Execution error: " .. tostring(err))
+                        end
+                    else
+                        Typewrite((currentLang == "TR") and "Kodu çalıştıramadım." or "Failed to extract code.")
+                    end
+                else
+                    Typewrite(aiReply)
+                end
+            else
+                Typewrite((currentLang == "TR") and "AI'dan eksik veri geldi." or "Received incomplete data from AI.")
+            end
+        else
+            -- API hatası veya geçersiz istek olursa bunu ekrana yazdıracak
+            local errDetail = response and (type(response) == "table" and tostring(response.StatusCode) or tostring(response)) or "Bilinmeyen Hata"
+            Typewrite("API Bağlantı Hatası: " .. errDetail)
+        end
+    end)
+end
+AISendBtn.MouseButton1Click:Connect(function()
+    local maxLimit = (UserTierValue == 2) and 20 or ((UserTierValue == 1) and 10 or 3)
+    if aiMessageCount >= maxLimit then
+        Typewrite((currentLang == "TR") and "Günlük AI limitinize ulaştınız ("..maxLimit.." Mesaj). Daha fazlası için Tier yükseltin." or "You reached your AI limit ("..maxLimit.." Messages). Upgrade Tier for more.")
+        return
+    end
+
+    local txt = AIInputBox.Text
+    if txt ~= "" then
+        aiMessageCount = aiMessageCount + 1
+        AIInputBox.Text = ""
+        RequestDarkerAI(txt)
+    end
+end)
+-- === AYARLAR SEKMESİ ===
+local SettingsCard = CreateCategoryCard(SettingsTab, "Arayüz Ayarları (GUI)")
+
+-- 1. ARAYÜZ BOYUTU
+local currentSizeState = 3
+CreateButton(SettingsCard, "Arayüz Boyutu", "Menünün boyutunu ayarlar.", 0, "NORMAL", function(btnTxt)
+    currentSizeState = currentSizeState + 1
+    if currentSizeState > 3 then currentSizeState = 1 end
+
+    local targetSize = UDim2.new(0, 800, 0, 520)
+    local stateName = "NORMAL"
+
+    if currentSizeState == 1 then
+        targetSize = UDim2.new(0, 480, 0, 350)
+        stateName = "KÜÇÜK"
+    elseif currentSizeState == 2 then
+        targetSize = UDim2.new(0, 620, 0, 420)
+        stateName = "ORTA"
+    end
+
+   CurrentUIWindowSize = targetSize -- YENİ: Seçilen boyutu hafızaya kaydeder
+    btnTxt.Text = stateName
+    TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = targetSize}):Play()
+end)
+-- 2. DİL DEĞİŞTİRME (LANGUAGE)
+local currentLang = "EN"
+
+local trToEn = {
+    ["Akıllı Altın Topla"] = "Smart Coin Farm", ["Biraz üstünden uçar, buga girmez ve anında geçer."] = "Flies above, prevents bugs, instant collect.",
+    ["Akıllı Silah Topla"] = "Smart Gun Farm", ["Silaha ışınlanıp eski yerine döner."] = "Teleports to gun and returns.",
+    ["Otomatik Katlet"] = "Auto Kill All", ["Herkesi önüne çeker ve katleder."] = "Pulls everyone and kills them.",
+    ["Katili Vur (Aimbot)"] = "Shoot Murderer (Aimbot)", ["Mobil uyumlu, katile pürüzsüz kilitlenir."] = "Mobile friendly, smoothly locks to murderer.",
+    ["Hitbox Expander"] = "Hitbox Expander", ["Katilin ve Şerifin kafasını devasa yapar."] = "Makes Murderer and Sheriff heads massive.",
+    ["Hızlı Yürüme"] = "Fast Walk", ["Yürüme hızını ayarlar ve yanda menü açar."] = "Adjusts walk speed and opens side menu.",
+    ["Noclip"] = "Noclip", ["Duvarların içinden geçersin."] = "Walk through walls.",
+    ["Pürüzsüz Uçuş (Fly)"] = "Smooth Fly", ["Premium animasyon destekli Fly."] = "Premium animation supported Fly.",
+    ["Güvenli Mod"] = "Safe Mode", ["Katilden ve fırlatılan bıçaktan kaçar."] = "Escapes murderer and thrown knife.",
+    ["Hayalet Görünmezlik"] = "Ghost Invisibility", ["Gerçek bedeni 1000 stud yukarı gizler."] = "Hides real body 1000 studs above.",
+    ["Tüm Oyuncular (Player ESP)"] = "All Players (ESP)", ["İsim, Mesafe ve Rol Gösterir."] = "Shows Name, Distance, and Role.",
+    ["Sadece Katil (Murderer ESP)"] = "Murderer ESP Only", ["Katili ve uzaklığını gösterir."] = "Shows murderer and distance.",
+    ["Sadece Şerif (Sheriff ESP)"] = "Sheriff ESP Only", ["Şerifi ve uzaklığını gösterir."] = "Shows sheriff and distance.",
+    ["Lobiye Işınlan"] = "Teleport to Lobby", ["Bekleme salonuna (Lobby) geri dönersin."] = "Returns you to the waiting lobby.",
+    ["Haritaya Işınlan"] = "Teleport to Map", ["Oynanan haritanın ortasına gidersin."] = "Goes to the middle of the current map.",
+    ["Katile Işınlan"] = "Teleport to Murderer", ["Katilin tam arkasına ışınlanırsın."] = "Teleports right behind the murderer.",
+    ["Şerife Işınlan"] = "Teleport to Sheriff", ["Şerifin tam arkasına ışınlanırsın."] = "Teleports right behind the sheriff.",
+    ["Arayüz Boyutu"] = "UI Size", ["Menünün boyutunu ayarlar."] = "Adjusts the size of the menu.",
+    ["Crosshair Rengi"] = "Crosshair Color", ["Aimbot nişangahının rengini değiştirir."] = "Changes aimbot crosshair color.",
+    ["Sürüm Değiştir (Tier)"] = "Switch Tier", ["Sahip olduğunuz yetkiye göre alt sürümlere geçebilirsiniz."] = "Switch to lower tiers based on your auth level.",
+    -- PRO MENU EKLENTİLERİ
+    ["Welcome to DarkerSH"] = "DarkerSH'a Hoş Geldiniz",
+    ["Your all-in-one hub for dominating the game."] = "Oyunu domine etmeniz için hepsi bir arada merkeziniz.",
+    ["Powerful Features"] = "Güçlü Özellikler",
+    ["40+ built-in features to enhance your gameplay."] = "Oyununuzu geliştirmek için 40'tan fazla dahili özellik.",
+    ["Safe & Secure"] = "Güvenli ve Korumalı",
+    ["Designed with security in mind. Stay undetected."] = "Güvenlik düşünülerek tasarlandı. Tespit edilmeden kalın.",
+    ["Performance"] = "Performans",
+    ["Optimized for the best performance."] = "En iyi performans için optimize edildi.",
+    ["Customizable"] = "Özelleştirilebilir",
+    ["Customize the hub to your liking."] = "Merkezi zevkinize göre özelleştirin.",
+    ["⚡ Quick Controls"] = "⚡ Hızlı Kontroller",
+    ["ℹ️ Information"] = "ℹ️ Bilgi",
+    ["DarkerSH is constantly updated with new features and improvements.\n\nJoin our community for support and updates!"] = "DarkerSH sürekli olarak yeni özellikler ve iyileştirmelerle güncellenir.\n\nDestek ve güncellemeler için topluluğumuza katılın!",
+    ["God Mode"] = "Ölümsüzlük",
+    ["Infinite Jump"] = "Sınırsız Zıplama",
+    ["Speed Hack"] = "Hız Hilesi",
+    ["Join Discord"] = "Discord'a Katıl"
+}
+
+local enToTr = {}
+for k, v in pairs(trToEn) do enToTr[v] = k end
+
+local function TranslateGUI(isTR)
+    local targetDict = isTR and enToTr or trToEn
+    for _, obj in pairs(ContentContainer:GetDescendants()) do
+        if obj:IsA("TextLabel") and (obj.Name == "TitleLbl" or obj.Name == "DescLbl") then
+            if targetDict[obj.Text] then obj.Text = targetDict[obj.Text] end
+        end
+    end
+end
+
+local function UpdateLanguage()
+    if currentLang == "TR" then
+        if WelcomeTitle then WelcomeTitle.Text = "MM2'yi Bu Yazılımımız İle Domine Et." end
+        pcall(function()
+            Tabs["Ana Menü"].Button.Text = "Ana Menü"
+            Tabs["Farm"].Button.Text = "Farm"; Tabs["Oyuncu"].Button.Text = "Oyuncu"
+            Tabs["Savaş"].Button.Text = "Savaş"; Tabs["Görsel"].Button.Text = "Görsel"
+            Tabs["Işınlanma"].Button.Text = "Işınlanma"; Tabs["Groq AI"].Button.Text = "Asistan AI"
+            Tabs["Ayarlar"].Button.Text = "Ayarlar"
+        end)
+        
+        if AIInputBox then AIInputBox.PlaceholderText = "Asistana komutunuzu yazın..." end
+        if AISendBtn then AISendBtn.Text = "GÖNDER" end
+        if ModeToggleBtn then ModeToggleBtn.Text = (aiMode == "Chat") and "Sohbet Modu" or "Kod Modu" end
+        if ModeDesc then ModeDesc.Text = (aiMode == "Chat") and "Asistan sizinle sadece sohbet eder." or "Asistan anında hile komutlarını çalıştırır." end
+        
+        -- PRO MENU ÇEVİRİLERİ (DİNAMİK YAZILAR) ÇÖKME DÜZELTİLDİ
+        if ProWelcome then ProWelcome.Text = "<font color=\"rgb(157,78,221)\">DarkerSH</font>'a Hoş Geldiniz" end
+        if ProSub then ProSub.Text = "Oyunu domine etmeniz için hepsi bir arada merkeziniz." end
+        if StatusTitle then StatusTitle.Text = "Durum: Tespit Edilmedi" end
+        if StatusDate then StatusDate.Text = "Son Güncelleme: Bugün" end
+        if CmdInput then CmdInput.PlaceholderText = ">_ Bir komut yazın..." end
+        if CmdExec then CmdExec.Text = "▶ Çalıştır" end
+        
+        TranslateGUI(true)
+    else
+        if WelcomeTitle then WelcomeTitle.Text = "Dominate MM2 With Our Soft-Ware" end
+        pcall(function()
+            Tabs["Ana Menü"].Button.Text = "Home"
+            Tabs["Farm"].Button.Text = "Farm"; Tabs["Oyuncu"].Button.Text = "Player"
+            Tabs["Savaş"].Button.Text = "Combat"; Tabs["Görsel"].Button.Text = "Visual"
+            Tabs["Işınlanma"].Button.Text = "Teleport"; Tabs["Groq AI"].Button.Text = "Assistant AI"
+            Tabs["Ayarlar"].Button.Text = "Settings"
+        end)
+        
+        if AIInputBox then AIInputBox.PlaceholderText = "Type your command to the assistant..." end
+        if AISendBtn then AISendBtn.Text = "SEND" end
+        if ModeToggleBtn then ModeToggleBtn.Text = (aiMode == "Chat") and "Chat Mode" or "Code Mode" end
+        if ModeDesc then ModeDesc.Text = (aiMode == "Chat") and "Assistant only chats with you." or "Assistant directly executes commands." end
+        
+        -- PRO MENU ÇEVİRİLERİ (DİNAMİK YAZILAR) ÇÖKME DÜZELTİLDİ
+        if ProWelcome then ProWelcome.Text = "<font color=\"rgb(157,78,221)\">DarkerSH</font> Welcome" end
+        if ProSub then ProSub.Text = "Your all-in-one hub for dominating the game." end
+        if StatusTitle then StatusTitle.Text = "Status: Undetected" end
+        if StatusDate then StatusDate.Text = "Last Updated: Today" end
+        if CmdInput then CmdInput.PlaceholderText = ">_ Type a command..." end
+        if CmdExec then CmdExec.Text = "▶ Execute" end
+        
+        TranslateGUI(false)
+    end
+end
+UpdateLanguage()
+-- Yan Yana 2 Butonluk Özel Tasarım
+local LangFrame = Instance.new("Frame")
+LangFrame.Size = UDim2.new(1, -5, 0, 40)
+LangFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+LangFrame.BackgroundTransparency = 1
+LangFrame.ZIndex = 4
+LangFrame.Parent = SettingsCard
+
+local EnBtn = Instance.new("TextButton")
+EnBtn.Size = UDim2.new(0.5, -3, 1, 0)
+EnBtn.Position = UDim2.new(0, 0, 0, 0)
+EnBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226) -- Varsayılan (Seçili) Renk
+EnBtn.Text = "English"
+EnBtn.Font = Enum.Font.GothamBold
+EnBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+EnBtn.TextSize = 12
+EnBtn.ZIndex = 5
+Instance.new("UICorner", EnBtn).CornerRadius = UDim.new(0, 6)
+EnBtn.Parent = LangFrame
+
+local TrBtn = Instance.new("TextButton")
+TrBtn.Size = UDim2.new(0.5, -3, 1, 0)
+TrBtn.Position = UDim2.new(0.5, 3, 0, 0)
+TrBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50) -- Pasif Renk
+TrBtn.Text = "Turkish"
+TrBtn.Font = Enum.Font.GothamBold
+TrBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TrBtn.TextSize = 12
+TrBtn.ZIndex = 5
+Instance.new("UICorner", TrBtn).CornerRadius = UDim.new(0, 6)
+TrBtn.Parent = LangFrame
+
+local function ChangeLang(lang)
+    if currentLang == lang then return end
+    currentLang = lang
+
+    -- Buton renklerini anında güncelle
+    EnBtn.BackgroundColor3 = (currentLang == "EN") and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(45, 45, 50)
+    TrBtn.BackgroundColor3 = (currentLang == "TR") and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(45, 45, 50)
+
+    -- Menüyü kapat-aç efekti
+    TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play()
+    task.wait(0.4)
+    MainFrame.Visible = false
+    UpdateLanguage() 
+    task.wait(0.2)
+    MainFrame.Visible = true
+    TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 800, 0, 520)}):Play()
+    Notify("Language updated to " .. currentLang)
+end
+
+EnBtn.MouseButton1Click:Connect(function() ChangeLang("EN") end)
+TrBtn.MouseButton1Click:Connect(function() ChangeLang("TR") end)
+-- 3. CROSSHAIR RENK SEÇİMİ
+local colors = {Color3.fromRGB(0, 255, 0), Color3.fromRGB(255, 0, 0), Color3.fromRGB(255, 255, 0), Color3.fromRGB(255, 255, 255)}
+local colorNames = {"YEŞİL", "KIRMIZI", "SARI", "BEYAZ"}
+local cIndex = 1
+CrossColor = colors[cIndex] -- Global atama
+
+CreateButton(SettingsCard, "Crosshair Rengi", "Aimbot nişangahının rengini değiştirir.", 0, "YEŞİL", function(btnTxt)
+    cIndex = cIndex + 1
+    if cIndex > #colors then cIndex = 1 end
+
+    CrossColor = colors[cIndex]
+    btnTxt.Text = colorNames[cIndex]
+    btnTxt.TextColor3 = colors[cIndex]
+end)
+-- 4. TIER (SÜRÜM) DEĞİŞTİRME SİSTEMİ
+CreateButton(SettingsCard, "Sürüm Değiştir (Tier)", "Sahip olduğunuz yetkiye göre alt sürümlere geçebilirsiniz.", 0, "GEÇİŞ YAP", function(btnTxt)
+    -- Eğer önceden açılmış bir menü varsa engelle
+    if ScreenGui:FindFirstChild("TierSelectionMenu") then return end
+
+    -- Ana Menü Çerçevesi
+    local TierMenu = Instance.new("Frame")
+    TierMenu.Name = "TierSelectionMenu"
+    TierMenu.Size = UDim2.new(0, 450, 0, 280)
+    TierMenu.AnchorPoint = Vector2.new(0.5, 0.5)
+    -- Ekranın solundan başlatıyoruz (Kayarak gelme efekti için)
+    TierMenu.Position = UDim2.new(-0.5, 0, 0.5, 0)
+    TierMenu.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    TierMenu.ZIndex = 500
+    Instance.new("UICorner", TierMenu).CornerRadius = UDim.new(0, 12)
+    TierMenu.Parent = ScreenGui
+
+    -- Dış Çerçeve (Stroke)
+    local TierStroke = Instance.new("UIStroke", TierMenu)
+    TierStroke.Color = Color3.fromRGB(138, 43, 226)
+    TierStroke.Thickness = 1.5
+
+    -- Koyu Lacivert ve Gece Yarısı Moru Gradient (Hareketli)
+    local TierGradient = Instance.new("UIGradient")
+    TierGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(5, 10, 25)),    -- Koyu Lacivert
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(30, 10, 45)), -- Gece Yarısı Moru
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 10, 25))
+    }
+    TierGradient.Rotation = 45
+    TierGradient.Parent = TierMenu
+    
+    local waveTween = TweenService:Create(TierGradient, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.5, 0)})
+    waveTween:Play()
+
+    -- Başlık
+    local MenuTitle = Instance.new("TextLabel")
+    MenuTitle.Size = UDim2.new(1, -20, 0, 40)
+    MenuTitle.Position = UDim2.new(0, 20, 0, 10)
+    MenuTitle.BackgroundTransparency = 1
+    MenuTitle.Text = "SÜRÜM (TIER) SEÇİMİ"
+    MenuTitle.Font = Enum.Font.GothamBlack
+    MenuTitle.TextColor3 = Color3.fromRGB(200, 180, 255)
+    MenuTitle.TextSize = 16
+    MenuTitle.TextXAlignment = Enum.TextXAlignment.Left
+    MenuTitle.ZIndex = 501
+    MenuTitle.Parent = TierMenu
+
+    -- Kapatma Butonu
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+    CloseBtn.Position = UDim2.new(1, -40, 0, 15)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(40, 20, 40)
+    CloseBtn.Text = "X"
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+    CloseBtn.TextSize = 14
+    CloseBtn.ZIndex = 501
+    Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+    CloseBtn.Parent = TierMenu
+
+    -- Sağ Kısım (Tier Seçenekleri)
+    local TierListFrame = Instance.new("Frame")
+    TierListFrame.Size = UDim2.new(0, 140, 0, 180)
+    TierListFrame.Position = UDim2.new(1, -160, 0, 70)
+    TierListFrame.BackgroundTransparency = 1
+    TierListFrame.ZIndex = 501
+    TierListFrame.Parent = TierMenu
+
+    local UIListLayout = Instance.new("UIListLayout")
+    UIListLayout.Padding = UDim.new(0, 15)
+    UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    UIListLayout.Parent = TierListFrame
+
+    -- Sol Kısım (Key Girişi ve Onay)
+    local KeyInput = Instance.new("TextBox")
+    KeyInput.Size = UDim2.new(0, 240, 0, 40)
+    KeyInput.Position = UDim2.new(0, 20, 0, 110)
+    KeyInput.BackgroundColor3 = Color3.fromRGB(20, 15, 30)
+    KeyInput.Text = ""
+    KeyInput.Font = Enum.Font.Gotham
+    KeyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KeyInput.TextSize = 12
+    KeyInput.ZIndex = 501
+    Instance.new("UICorner", KeyInput).CornerRadius = UDim.new(0, 6)
+    Instance.new("UIStroke", KeyInput).Color = Color3.fromRGB(138, 43, 226)
+    KeyInput.Parent = TierMenu
+
+    local ApplyBtn = Instance.new("TextButton")
+    ApplyBtn.Size = UDim2.new(0, 240, 0, 40)
+    ApplyBtn.Position = UDim2.new(0, 20, 0, 165)
+    ApplyBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+    ApplyBtn.Text = "LOG-IN"
+    ApplyBtn.Font = Enum.Font.GothamBold
+    ApplyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ApplyBtn.TextSize = 14
+    ApplyBtn.ZIndex = 501
+    Instance.new("UICorner", ApplyBtn).CornerRadius = UDim.new(0, 6)
+    ApplyBtn.Parent = TierMenu
+
+    -- MEVCUT SÜRÜMÜ GİZLEYEN BUTON SİSTEMİ
+    local TierButtons = {}
+    local currentTierName = TierNames[UserTierValue] -- Şu anki sürümün ismini alır
+    local SelectedTierStr = ""
+    
+    local function CreateTierOption(name, color, order)
+        if name == currentTierName then return end -- ŞU ANKİ SÜRÜMÜ MENÜYE EKLEME
+        
+        local TBtn = Instance.new("TextButton")
+        TBtn.Size = UDim2.new(1, 0, 0, 45)
+        TBtn.BackgroundColor3 = Color3.fromRGB(25, 20, 35)
+        TBtn.Text = name
+        TBtn.Font = Enum.Font.GothamBlack
+        TBtn.TextColor3 = Color3.fromRGB(150, 150, 160)
+        TBtn.TextSize = 16
+        TBtn.LayoutOrder = order
+        TBtn.ZIndex = 501
+        Instance.new("UICorner", TBtn).CornerRadius = UDim.new(0, 8)
+        
+        local Stroke = Instance.new("UIStroke", TBtn)
+        Stroke.Color = color
+        Stroke.Thickness = 1
+        Stroke.Transparency = 0.5
+        
+        TBtn.Parent = TierListFrame
+        TierButtons[name] = TBtn
+
+        TBtn.MouseButton1Click:Connect(function()
+            SelectedTierStr = name
+            KeyInput.PlaceholderText = name .. " Keyinizi girin..."
+            
+            for btnName, btn in pairs(TierButtons) do
+                if btnName == name then
+                    TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = color, TextColor3 = Color3.fromRGB(255,255,255)}):Play()
+                    btn.UIStroke.Transparency = 0
+                else
+                    TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(25, 20, 35), TextColor3 = Color3.fromRGB(150, 150, 160)}):Play()
+                    btn.UIStroke.Transparency = 0.5
+                end
+            end
+        end)
+    end
+
+    CreateTierOption("PRO", Color3.fromRGB(138, 43, 226), 1)
+    CreateTierOption("LITE", Color3.fromRGB(50, 150, 255), 2)
+    CreateTierOption("FREE", Color3.fromRGB(100, 100, 100), 3)
+
+    -- Dinamik varsayılan seçimi ayarla (PRO'daysa LITE seçili başlasın vs.)
+    SelectedTierStr = "PRO"
+    if currentTierName == "PRO" then SelectedTierStr = "LITE" end
+    if currentTierName == "PRO" and UserTierValue == 1 then SelectedTierStr = "PRO" end 
+    
+    if TierButtons[SelectedTierStr] then
+        local defColor = (SelectedTierStr == "PRO" and Color3.fromRGB(138, 43, 226)) or (SelectedTierStr == "LITE" and Color3.fromRGB(50, 150, 255)) or Color3.fromRGB(100, 100, 100)
+        TierButtons[SelectedTierStr].BackgroundColor3 = defColor
+        TierButtons[SelectedTierStr].TextColor3 = Color3.fromRGB(255, 255, 255)
+        TierButtons[SelectedTierStr].UIStroke.Transparency = 0
+    end
+    
+    KeyInput.PlaceholderText = SelectedTierStr .. " Keyinizi girin..."
+
+    -- Soldan kayarak gelme animasyonu
+    TweenService:Create(TierMenu, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
+
+    local function CloseMenu()
+        TweenService:Create(TierMenu, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(1.5, 0, 0.5, 0)}):Play()
+        task.wait(0.4)
+        waveTween:Cancel()
+        TierMenu:Destroy()
+    end
+    CloseBtn.MouseButton1Click:Connect(CloseMenu)
+
+    -- Eriyerek Yok Olma Efekti (Melt Effect)
+    local function MeltAway()
+        -- Çerçevenin hafifçe aşağı kayması ve görünmez olması
+        TweenService:Create(TierMenu, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+            Position = UDim2.new(0.5, 0, 0.55, 0),
+            BackgroundTransparency = 1
+        }):Play()
+
+        -- İçindeki tüm objelerin şeffaflaşması
+        for _, obj in pairs(TierMenu:GetDescendants()) do
+            if obj:IsA("GuiObject") then
+                pcall(function() TweenService:Create(obj, TweenInfo.new(1), {BackgroundTransparency = 1}):Play() end)
+                if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                    pcall(function() TweenService:Create(obj, TweenInfo.new(1), {TextTransparency = 1}):Play() end)
+                end
+                if obj:IsA("UIStroke") then
+                    pcall(function() TweenService:Create(obj, TweenInfo.new(1), {Transparency = 1}):Play() end)
+                end
+            end
+        end
+
+        task.wait(1.2)
+        waveTween:Cancel()
+        TierMenu:Destroy()
+    end
+
+    -- Giriş Yap Butonu Mantığı
+    ApplyBtn.MouseButton1Click:Connect(function()
+        local inputKey = KeyInput.Text
+        local isValid = false
+
+        -- Key Regex Kontrolleri
+        if SelectedTierStr == "FREE" and inputKey == "Free_4202" then isValid = true
+        elseif SelectedTierStr == "LITE" and inputKey:match("^%a%a%a%a%a%a%d%d%d$") then isValid = true
+        elseif SelectedTierStr == "PRO" and inputKey:match("^%a%a%a%a%a%a%a%a%a%a%a%a%d%d%d%d$") then isValid = true
+        end
+
+        if isValid then
+            ApplyBtn.Text = "BAŞARILI!"
+            ApplyBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+            
+            -- Erime efektini başlat
+            MeltAway()
+            
+            -- Ana sistem fonksiyonunu çağırarak arayüzü yeni yetkiye göre güncelle
+            VerifyAndLoadMenu(inputKey, false)
+            Notify("Başarıyla " .. SelectedTierStr .. " sürümüne geçildi!")
+        else
+            KeyInput.Text = ""
+            KeyInput.PlaceholderText = "Geçersiz Key!"
+            ApplyBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            task.wait(1)
+            ApplyBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+            KeyInput.PlaceholderText = SelectedTierStr .. " Keyinizi girin..."
+        end
+    end)
+end)
+
+-- ==========================================
+-- SİNEMATİK INTRO VE KEY SİSTEMİ (ORİJİNAL)
+-- ==========================================
+local IntroFrame = Instance.new("Frame")
+IntroFrame.Size = UDim2.new(1, 0, 1, 0)
+IntroFrame.Position = UDim2.new(0, 0, 0, 0)
+IntroFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255) 
+IntroFrame.BackgroundTransparency = 1 
+IntroFrame.ZIndex = 200
+IntroFrame.Parent = ScreenGui
+
+local IntroGradient = Instance.new("UIGradient")
+IntroGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 5, 15)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(40, 10, 60)), 
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 5, 15))
+}
+IntroGradient.Rotation = 45
+IntroGradient.Parent = IntroFrame
+
+local waveTweenInfo = TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+TweenService:Create(IntroGradient, waveTweenInfo, {Offset = Vector2.new(0.5, 0)}):Play()
+
+local TitleContainer = Instance.new("Frame")
+TitleContainer.Size = UDim2.new(1, 0, 1, 0)
+TitleContainer.BackgroundTransparency = 1
+TitleContainer.ZIndex = 201
+TitleContainer.Parent = IntroFrame
+
+local TitleLayout = Instance.new("UIListLayout")
+TitleLayout.FillDirection = Enum.FillDirection.Horizontal
+TitleLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+TitleLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+TitleLayout.Padding = UDim.new(0, 20)
+TitleLayout.Parent = TitleContainer
+
+local IntroLogo = Instance.new("ImageLabel")
+IntroLogo.Size = UDim2.new(0, 80, 0, 80)
+IntroLogo.BackgroundTransparency = 1
+IntroLogo.Image = "rbxassetid://126964821713679"
+IntroLogo.ScaleType = Enum.ScaleType.Fit
+IntroLogo.ImageTransparency = 1
+IntroLogo.ZIndex = 201
+IntroLogo.Parent = TitleContainer
+
+local RebornText = Instance.new("TextLabel")
+RebornText.Size = UDim2.new(0, 480, 0, 80)
+RebornText.BackgroundTransparency = 1
+RebornText.Text = "DarkerSH Reborn"
+RebornText.Font = Enum.Font.GothamBlack
+RebornText.TextSize = 54
+RebornText.TextTransparency = 1 
+RebornText.TextColor3 = Color3.fromRGB(255, 255, 255)
+RebornText.TextXAlignment = Enum.TextXAlignment.Left
+RebornText.ZIndex = 201
+RebornText.Parent = TitleContainer
+
+local TextGradient = Instance.new("UIGradient")
+TextGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 32, 240)), 
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(70, 0, 130))    
+}
+TextGradient.Parent = RebornText
+
+local KeyContainer = Instance.new("Frame")
+KeyContainer.Size = UDim2.new(0, 300, 0, 150)
+KeyContainer.Position = UDim2.new(0.5, -150, -0.5, -75) 
+KeyContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+KeyContainer.BackgroundTransparency = 1
+KeyContainer.ZIndex = 201
+KeyContainer.Parent = IntroFrame
+Instance.new("UICorner", KeyContainer).CornerRadius = UDim.new(0, 12)
+
+local KeyStroke = Instance.new("UIStroke", KeyContainer)
+KeyStroke.Color = Color3.fromRGB(138, 43, 226)
+KeyStroke.Transparency = 1
+
+local IntroKeyTitle = Instance.new("TextLabel")
+IntroKeyTitle.Size = UDim2.new(1, 0, 0, 30)
+IntroKeyTitle.Position = UDim2.new(0, 0, 0, 10)
+IntroKeyTitle.BackgroundTransparency = 1
+IntroKeyTitle.Text = "DARKERSH ACCESS KEY"
+IntroKeyTitle.Font = Enum.Font.GothamBold
+IntroKeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+IntroKeyTitle.TextSize = 14
+IntroKeyTitle.TextTransparency = 1
+IntroKeyTitle.ZIndex = 202
+IntroKeyTitle.Parent = KeyContainer
+
+local IntroKeyInput = Instance.new("TextBox")
+IntroKeyInput.Size = UDim2.new(0.9, 0, 0, 40)
+IntroKeyInput.Position = UDim2.new(0.05, 0, 0, 45)
+IntroKeyInput.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+IntroKeyInput.BackgroundTransparency = 1
+IntroKeyInput.PlaceholderText = "Enter key here..."
+IntroKeyInput.Text = ""
+IntroKeyInput.Font = Enum.Font.Gotham
+IntroKeyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+IntroKeyInput.TextSize = 12
+IntroKeyInput.TextTransparency = 1
+IntroKeyInput.ZIndex = 202
+Instance.new("UICorner", IntroKeyInput).CornerRadius = UDim.new(0, 6)
+IntroKeyInput.Parent = KeyContainer
+
+local IntroVerifyBtn = Instance.new("TextButton")
+IntroVerifyBtn.Size = UDim2.new(0.9, 0, 0, 40)
+IntroVerifyBtn.Position = UDim2.new(0.05, 0, 0, 95)
+IntroVerifyBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+IntroVerifyBtn.BackgroundTransparency = 1
+IntroVerifyBtn.Text = "LOGIN"
+IntroVerifyBtn.Font = Enum.Font.GothamBold
+IntroVerifyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+IntroVerifyBtn.TextSize = 14
+IntroVerifyBtn.TextTransparency = 1
+IntroVerifyBtn.ZIndex = 202
+Instance.new("UICorner", IntroVerifyBtn).CornerRadius = UDim.new(0, 6)
+IntroVerifyBtn.Parent = KeyContainer
+
+local WelcomeText = Instance.new("TextLabel")
+WelcomeText.Size = UDim2.new(0, 600, 0, 100)
+WelcomeText.AnchorPoint = Vector2.new(0.5, 0.5)
+WelcomeText.Position = UDim2.new(0.5, 0, 0.5, 0)
+WelcomeText.BackgroundTransparency = 1
+WelcomeText.Text = ""
+WelcomeText.Font = Enum.Font.GothamBlack
+WelcomeText.TextScaled = true
+WelcomeText.TextColor3 = Color3.fromRGB(255, 255, 255)
+WelcomeText.TextTransparency = 1
+WelcomeText.ZIndex = 201
+WelcomeText.Visible = false
+WelcomeText.Parent = IntroFrame
+
+local WelcomeGradient = Instance.new("UIGradient")
+WelcomeGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 0, 130)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 32, 240)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(70, 0, 130))
+}
+WelcomeGradient.Parent = WelcomeText
+TweenService:Create(WelcomeGradient, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(1, 0)}):Play()
+
+task.spawn(function()
+    TweenService:Create(IntroFrame, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 0.1}):Play()
+    TweenService:Create(RebornText, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+    TweenService:Create(IntroLogo, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play() 
+    
+    task.wait(2.5) 
+    
+    TweenService:Create(RebornText, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {TextTransparency = 1}):Play()
+    TweenService:Create(IntroLogo, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {ImageTransparency = 1}):Play() 
+    task.wait(1)
+    
+    TweenService:Create(KeyContainer, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0.5, -150, 0.5, -75),
+        BackgroundTransparency = 0
+    }):Play()
+    
+    TweenService:Create(KeyStroke, TweenInfo.new(0.8), {Transparency = 0}):Play()
+    TweenService:Create(IntroKeyTitle, TweenInfo.new(0.8), {TextTransparency = 0}):Play()
+    TweenService:Create(IntroKeyInput, TweenInfo.new(0.8), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
+    TweenService:Create(IntroVerifyBtn, TweenInfo.new(0.8), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
+end)
+
+-- Sistem Fonksiyonları (Sadeleştirilmiş Aktif Gradient & Renk Kilidi Sistemi)
+VerifyAndLoadMenu = function(k, isAuto)
+    local tierName = ""
+
+    if k == "Free_4202" then
+        UserTierValue = 0; tierName = "FREE"
+        TierBadge.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    elseif k:match("^%a%a%a%a%a%a%d%d%d$") then
+        UserTierValue = 1; tierName = "LITE"
+        TierBadge.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+    elseif k:match("^%a%a%a%a%a%a%a%a%a%a%a%a%d%d%d%d$") then
+        UserTierValue = 2; tierName = "PRO"
+        TierBadge.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+    else
+        if ScreenGui:FindFirstChild("TierSelectionMenu") then
+            return false
+        elseif IntroKeyInput then
+            IntroKeyInput.Text = (currentLang == "TR") and "Geçersiz Anahtar!" or "Invalid Key!"
+            task.wait(1)
+            IntroKeyInput.Text = ""
+            return false
+        end
+        return false
+    end
+
+    pcall(function() writefile("DarkerSH_Key.txt", k) end)
+    TierText.Text = tierName
+
+    if KeyContainer then KeyContainer:Destroy() end
+    
+    for _, item in ipairs(FeatureElements) do
+        if UserTierValue < item.Tier then
+            item.UI.Visible = false
+        else
+            item.UI.Visible = true
+        end
+    end
+
+    -- =========================================================
+    -- 1. ARAYÜZÜ SIFIRLAMA (LITE VE FREE İÇİN ESKİ RENKLERİ GERİ YÜKLEME)
+    -- =========================================================
+    ProHomeContainer.Visible = false
+    WelcomeTitle.Visible = true
+    StatsFrame.Visible = true
+    ProfileFrame.Visible = true
+    
+    if _G.ProColorLoop then _G.ProColorLoop:Disconnect() _G.ProColorLoop = nil end
+    
+    if UserTierValue == 0 then -- FREE SÜRÜM
+        MainGradient.Enabled = false
+        MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    else -- LITE SÜRÜM
+        MainGradient.Enabled = true
+        MainGradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 10, 50)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(110, 30, 180)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 10, 50))
+        }
+        MainFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 30)
+    end
+    
+    Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 23)
+    MainStroke.Color = Color3.fromRGB(255, 255, 255)
+
+    if CloseBtn then
+        CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+        if CloseBtn:FindFirstChild("CloseGrad") then CloseBtn.CloseGrad.Enabled = false end
+    end
+    if MinimizeBtn then
+        MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        if MinimizeBtn:FindFirstChild("MinGrad") then MinimizeBtn.MinGrad.Enabled = false end
+    end
+    
+    for _, child in pairs(MainStroke:GetChildren()) do
+        if child:IsA("UIGradient") then child:Destroy() end
+    end
+
+    if EnBtn and TrBtn then
+        EnBtn.BackgroundColor3 = (currentLang == "EN") and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(45, 45, 50)
+        TrBtn.BackgroundColor3 = (currentLang == "TR") and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(45, 45, 50)
+        EnBtn.TextStrokeTransparency = 1 -- Metin gölgesini varsayılana çevir
+        TrBtn.TextStrokeTransparency = 1
+        if EnBtn:FindFirstChild("ProWave") then EnBtn.ProWave.Enabled = false end
+        if TrBtn:FindFirstChild("ProWave") then TrBtn.ProWave.Enabled = false end
+    end
+
+    for tName, tabData in pairs(Tabs) do
+        tabData.Button.TextXAlignment = Enum.TextXAlignment.Center
+        if tabData.Button:FindFirstChildOfClass("UIPadding") then
+            tabData.Button:FindFirstChildOfClass("UIPadding"):Destroy()
+        end
+        if tabData.Button:FindFirstChild("TabIconLbl") then
+            tabData.Button.TabIconLbl:Destroy()
+        end
+        if tabData.Button:FindFirstChild("TabWaveGradient") then
+            tabData.Button.TabWaveGradient:Destroy()
+        end
+        
+        if tabData.Page.Visible then
+            tabData.Button.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+            tabData.Button.BackgroundTransparency = 0
+            tabData.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        else
+            tabData.Button.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+            tabData.Button.BackgroundTransparency = 0
+            tabData.Button.TextColor3 = Color3.fromRGB(200, 200, 200)
+        end
+    end
+    
+    for _, obj in pairs(ProHomeContainer:GetDescendants()) do
+        if obj:FindFirstChild("ProWave") then obj.ProWave.Enabled = false end
+        
+        if obj:IsA("Frame") and obj.Size == UDim2.new(0, 32, 0, 16) then
+            local circ = obj:FindFirstChild("Circ")
+            obj.BackgroundColor3 = (circ and circ.Position.X.Offset < -5) and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(35, 28, 55)
+        end
+        if obj.Name == "Circ" then
+            obj.BackgroundColor3 = (obj.Position.X.Offset < -5) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 200)
+        end
+    end
+
+    for _, obj in pairs(ContentContainer:GetDescendants()) do
+        if obj:FindFirstChild("ProWave") then obj.ProWave.Enabled = false end
+
+        if obj:IsA("UIGradient") and obj.Parent and obj.Parent:IsA("GuiObject") and obj.Parent.BackgroundColor3 == Color3.fromRGB(255, 255, 255) and obj.Name ~= "ProWave" then
+            obj.Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 5, 40)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(60, 10, 90)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 5, 40))
+            }
+        end
+
+        if obj:IsA("Frame") and obj.Size == UDim2.new(1, -5, 0, 45) then
+            obj.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+            obj.BackgroundTransparency = 0
+        end
+        if obj:IsA("Frame") and obj.Size == UDim2.new(0, 65, 0, 20) then
+            obj.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+            obj.BackgroundTransparency = 0
+        end
+        if obj:IsA("Frame") and obj.Size == UDim2.new(0, 36, 0, 18) then
+            local circ = obj:FindFirstChild("Circle")
+            obj.BackgroundColor3 = (circ and circ.Position.X.Offset < -5) and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(45, 45, 50)
+        end
+        if obj.Name == "Circle" then
+            obj.BackgroundColor3 = (obj.Position.X.Offset < -5) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 200)
+        end
+    end
+
+    -- =========================================================
+    -- 2. EĞER YENİ TIER PRO İSE PRO TASARIMINI UYGULA
+    -- =========================================================
+    if UserTierValue == 2 then
+        MainGradient.Enabled = true
+        MainGradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(5, 10, 30)),     
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(92, 36, 211)), 
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 5, 40))      
+        }
+        
+        ApplyChasingBorder(MainStroke)
+
+        MainFrame.BackgroundColor3 = Color3.fromRGB(10, 12, 25) 
+        Sidebar.BackgroundColor3 = Color3.fromRGB(12, 14, 35)   
+        
+        WelcomeTitle.Visible = false
+        StatsFrame.Visible = false
+        ProHomeContainer.Visible = true
+        ProfileFrame.Visible = false
+
+        if CloseBtn then
+            CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            if CloseBtn:FindFirstChild("CloseGrad") then CloseBtn.CloseGrad.Enabled = true end
+        end
+        if MinimizeBtn then
+            MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            if MinimizeBtn:FindFirstChild("MinGrad") then MinimizeBtn.MinGrad.Enabled = true end
+        end
+
+        -- ==== DİNAMİK RENK ŞEMALARI ====
+        local proColorSeq = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(5, 10, 30)),     -- Koyu Gece Laciverti
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(30, 10, 45)),  -- Gece Yarısı Moru
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 10, 30))
+        }
+        
+        local activeBtnSeq = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 10, 45)),    -- Gece Moru
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(110, 30, 180)),-- Canlı Mor
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 10, 45))
+        }
+        
+        local dotActiveSeq = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 5, 40)),     -- Koyu Gece Moru
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(138, 43, 226)),-- Mor
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 5, 40))
+        }
+
+        local function CreateOrGetWave(obj, seq, speed)
+            local grad = obj:FindFirstChild("ProWave") or Instance.new("UIGradient")
+            grad.Name = "ProWave"
+            grad.Color = seq
+            grad.Parent = obj
+            
+            if not obj:FindFirstChild("WaveAnimStarted") then
+                Instance.new("BoolValue", obj).Name = "WaveAnimStarted"
+                TweenService:Create(grad, TweenInfo.new(speed or 2.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(-1, 0)}):Play()
+            end
+            return grad
+        end
+
+        -- Sabit Özellik Kutularını ve Çerçeveleri Ayarla
+        for _, obj in pairs(ProHomeContainer:GetDescendants()) do
+            if (obj:IsA("Frame") or obj:IsA("TextButton")) and (obj.BackgroundColor3 == Color3.fromRGB(20, 5, 35) or obj.BackgroundColor3 == Color3.fromRGB(20, 15, 35) or obj.BackgroundColor3 == Color3.fromRGB(23, 18, 43) or obj.BackgroundColor3 == Color3.fromRGB(18, 14, 33) or obj.BackgroundColor3 == Color3.fromRGB(18, 16, 42)) then
+                obj.BackgroundColor3 = Color3.fromRGB(18, 16, 42)
+                obj.BackgroundTransparency = 0.1 
+            end
+        end
+
+        -- 1. Dil (Language) Butonları Animasyonu (AÇIKKEN HAREKETLİ, KAPALIYKEN SABİT)
+        local function ApplyLangBtnBehavior(btn, langCode)
+            local grad = CreateOrGetWave(btn, activeBtnSeq, 1.5)
+            btn.TextStrokeTransparency = 0.3 -- Yazının daha belirgin olması için metin gölgesi
+            btn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+            
+            local function updateState()
+                if UserTierValue == 2 then
+                    if currentLang == langCode then
+                        grad.Enabled = true
+                        btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                    else
+                        grad.Enabled = false
+                        btn.BackgroundColor3 = Color3.fromRGB(25, 18, 35) -- Sabit Pasif Renk
+                    end
+                end
+            end
+            
+            updateState()
+            if not btn:FindFirstChild("LangLock") then
+                Instance.new("BoolValue", btn).Name = "LangLock"
+                btn:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
+                    if UserTierValue == 2 and btn.BackgroundColor3 == Color3.fromRGB(138, 43, 226) then
+                        updateState()
+                    end
+                end)
+            end
+        end
+
+        if EnBtn and TrBtn then
+            ApplyLangBtnBehavior(EnBtn, "EN")
+            ApplyLangBtnBehavior(TrBtn, "TR")
+        end
+
+        -- 2. Switch Noktaları (AÇIKKEN HAREKETLİ, KAPALIYKEN SABİT)
+        local function ApplySwitchBehavior(obj)
+            local grad = CreateOrGetWave(obj, dotActiveSeq, 1.5)
+            
+            local function updateState()
+                if UserTierValue == 2 then
+                    if obj.Position.X.Offset < -5 then 
+                        grad.Enabled = true
+                        obj.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                    else
+                        grad.Enabled = false
+                        obj.BackgroundColor3 = Color3.fromRGB(200, 200, 200) 
+                    end
+                end
+            end
+            
+            updateState()
+            
+            if not obj:FindFirstChild("SwitchLock") then
+                Instance.new("BoolValue", obj).Name = "SwitchLock"
+                obj:GetPropertyChangedSignal("Position"):Connect(updateState)
+            end
+        end
+
+        for _, obj in pairs(ContentContainer:GetDescendants()) do
+            if obj:IsA("Frame") and obj.Size == UDim2.new(1, -5, 0, 45) then
+                obj.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                obj.BackgroundTransparency = 0.25 
+                CreateOrGetWave(obj, proColorSeq).Enabled = true
+            end
+            
+            -- NORMAL BUTONLARIN (Action Butonları) TIKLANINCA KOYULAŞMASINI ENGELLEYEN SİSTEM
+            if obj:IsA("Frame") and obj.Size == UDim2.new(0, 65, 0, 20) then
+                obj.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                obj.BackgroundTransparency = 0
+                CreateOrGetWave(obj, proColorSeq).Enabled = true
+                
+                -- Tıklanma animasyonu arka planı gri/koyu mor yapmaya çalıştığında beyazda tutar
+                if not obj:FindFirstChild("ActionBtnLock") then
+                    Instance.new("BoolValue", obj).Name = "ActionBtnLock"
+                    obj:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
+                        if UserTierValue == 2 and obj.BackgroundColor3 ~= Color3.fromRGB(255, 255, 255) then
+                            obj.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                        end
+                    end)
+                end
+            end
+            
+            if obj:IsA("UIStroke") and obj.Parent and obj.Parent:IsA("Frame") and (obj.Parent.BackgroundColor3 == Color3.fromRGB(255, 255, 255) or obj.Parent.Size == UDim2.new(0, 65, 0, 20)) then
+                CreateOrGetWave(obj, proColorSeq).Enabled = true
+            end
+
+            if obj.Name == "Circle" then
+                ApplySwitchBehavior(obj)
+            end
+        end
+
+        for _, obj in pairs(ProHomeContainer:GetDescendants()) do
+            if obj.Name == "Circ" then
+                ApplySwitchBehavior(obj)
+            end
+        end
+        
+        -- Sekmeler (Tabs)
+        local tabIcons = {
+            ["Ana Menü"] = "rbxassetid://6022668888", ["Farm"] = "rbxassetid://6023282396", 
+            ["Oyuncu"] = "rbxassetid://6022668888", ["Savaş"] = "rbxassetid://6023282396", 
+            ["Görsel"] = "rbxassetid://6022668888", ["Işınlanma"] = "rbxassetid://6023282396", 
+            ["Groq AI"] = "rbxassetid://6022668888", ["Ayarlar"] = "rbxassetid://6023282396"
+        }
+        
+        for tName, tabData in pairs(Tabs) do
+            tabData.Button.TextXAlignment = Enum.TextXAlignment.Left
+            local pad = Instance.new("UIPadding", tabData.Button)
+            pad.PaddingLeft = UDim.new(0, 35)
+            
+            local IconLbl = Instance.new("ImageLabel")
+            IconLbl.Name = "TabIconLbl"
+            IconLbl.Size = UDim2.new(0, 18, 0, 18)
+            IconLbl.Position = UDim2.new(0, -26, 0.5, -9) 
+            IconLbl.BackgroundTransparency = 1
+            IconLbl.Image = tabIcons[tName] or "rbxassetid://6022668888"
+            IconLbl.Parent = tabData.Button
+
+            local TabGrad = Instance.new("UIGradient")
+            TabGrad.Name = "TabWaveGradient"
+            TabGrad.Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 10, 60)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 32, 240)), 
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 10, 60))
+            }
+            TabGrad.Parent = tabData.Button
+            
+            if tabData.Page.Visible then
+                tabData.Button.BackgroundTransparency = 1
+                TabGrad.Enabled = true
+                tabData.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+                IconLbl.ImageColor3 = Color3.fromRGB(255, 255, 255)
+            else
+                tabData.Button.BackgroundTransparency = 1
+                TabGrad.Enabled = false
+                tabData.Button.TextColor3 = Color3.fromRGB(150, 150, 160)
+                IconLbl.ImageColor3 = Color3.fromRGB(150, 150, 160)
+            end
+            
+            if not tabData.Button:FindFirstChild("EventConnected") then
+                local marker = Instance.new("BoolValue", tabData.Button)
+                marker.Name = "EventConnected"
+                tabData.Button:GetPropertyChangedSignal("TextColor3"):Connect(function()
+                    if tabData.Button.TextColor3 == Color3.fromRGB(255, 255, 255) then
+                        IconLbl.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                    else
+                        IconLbl.ImageColor3 = Color3.fromRGB(150, 150, 160)
+                    end
+                end)
+            end
+        end
+        Title.Text = "DarkerSH"
+    end
+
+    -- =========================================================
+    -- 3. ARAYÜZÜN YENİDEN YÜKLENMESİ VE SİNEMATİK SONUÇ
+    -- =========================================================
+    if not isAuto then
+        local welcomeMsg = (currentLang == "TR") and ("Hoş Geldiniz, \n" .. tierName .. " Tanımlandı") or ("Welcome, \n" .. tierName .. " Granted")
+        
+        if IntroFrame and IntroFrame.Parent then
+            WelcomeText.Text = welcomeMsg
+            WelcomeText.Visible = true
+            TweenService:Create(WelcomeText, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
+            task.wait(2) 
+            local fadeOutInfo = TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+            TweenService:Create(IntroFrame, fadeOutInfo, {BackgroundTransparency = 1}):Play()
+            TweenService:Create(WelcomeText, fadeOutInfo, {TextTransparency = 1}):Play()
+            task.wait(1)
+            if IntroFrame then IntroFrame:Destroy() end
+        end
+    else
+        if IntroFrame then IntroFrame:Destroy() end
+    end
+
+    MainFrame.Size = UDim2.new(0, 0, 0, 0)
+    MainFrame.Visible = true
+    TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = CurrentUIWindowSize}):Play()
+    
+    return true
+end
+IntroVerifyBtn.MouseButton1Click:Connect(function()
+    VerifyAndLoadMenu(IntroKeyInput.Text, false)
+end)
+
+task.spawn(function()
+    local savedKey = nil
+    pcall(function() savedKey = readfile("DarkerSH_Key.txt") end)
+    
+    if savedKey and savedKey ~= "" then
+        task.wait(0.5) 
+        VerifyAndLoadMenu(savedKey, true)
+        Notify("Otomatik Giriş Yapıldı: " .. savedKey)
+    end
+end)
