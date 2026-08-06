@@ -9,8 +9,8 @@ local Stats = game:GetService("Stats")
 local VerifyAndLoadMenu -- YENİ: Scriptin çökmesini engelleyen ana ön-tanımlama
 local LocalPlayer = Players.LocalPlayer
 while not LocalPlayer do
-Players.PlayerAdded:Wait()
-LocalPlayer = Players.LocalPlayer
+    task.wait()
+    LocalPlayer = Players.LocalPlayer
 end
 
 -- Eski GUI temizliği
@@ -26,8 +26,13 @@ ScreenGui.Name = "DarkerSH"
 ScreenGui.ResetOnSpawn = false
 pcall(function() ScreenGui.IgnoreGuiInset = true end) -- ÇÖKME ÖNLEYİCİ EKLENDİ (Eski exploitler için koruma)
 
-local success = pcall(function() ScreenGui.Parent = CoreGui end)
-if not success then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+local success = pcall(function() 
+    -- Delta'nın desteklediği gethui() varsa onu kullanır, yoksa CoreGui dener.
+    ScreenGui.Parent = (gethui and gethui()) or CoreGui 
+end)
+if not success then 
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") 
+end
 
 local function MakeDraggable(gui, dragPart)
 dragPart = dragPart or gui
