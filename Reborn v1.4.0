@@ -30,20 +30,8 @@ ScreenGui.Name = "DarkerSH"
 ScreenGui.ResetOnSpawn = false
 pcall(function() ScreenGui.IgnoreGuiInset = true end) -- ÇÖKME ÖNLEYİCİ EKLENDİ (Eski exploitler için koruma)
 
-local guiParent
-if gethui then
-    guiParent = gethui()
-else
-    guiParent = CoreGui
-end
-
-local success, err = pcall(function()
-    ScreenGui.Parent = guiParent
-end)
-
-if not success then
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
+local success = pcall(function() ScreenGui.Parent = CoreGui end)
+if not success then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
 local function MakeDraggable(gui, dragPart)
 dragPart = dragPart or gui
@@ -1247,18 +1235,18 @@ CmdExec.Parent = CmdFrame
 CmdExec.MouseButton1Click:Connect(function()
     local text = CmdInput.Text
     if text ~= "" then
-       if not loadstring then
-    Notify("Hata: Exploitin loadstring desteklemiyor!")
-    return
-end
-local func, err = loadstring(text)
+        -- Eğer executor loadstring desteklemiyorsa veya kapalıysa çökmeyi önler
+        if type(loadstring) ~= "function" then
+            Notify((currentLang == "TR") and "Hata: Executor loadstring desteklemiyor!" or "Error: Executor doesn't support loadstring!")
+            return
+        end
+        
+        local func, err = loadstring(text)
         if func then
             task.spawn(func)
-            local msg = (currentLang == "TR") and "Komut çalıştırıldı: " or "Executed: "
-            Notify(msg .. text)
+            Notify(((currentLang == "TR") and "Komut çalıştırıldı: " or "Executed: ") .. text)
         else
-            local msg = (currentLang == "TR") and "Hata: " or "Error: "
-            Notify(msg .. tostring(err))
+            Notify(((currentLang == "TR") and "Hata: " or "Error: ") .. tostring(err))
         end
         CmdInput.Text = ""
     end
