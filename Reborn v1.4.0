@@ -2913,27 +2913,15 @@ TrBtn.MouseButton1Click:Connect(function() ChangeLang("TR") end)
 local colors = {Color3.fromRGB(0, 255, 0), Color3.fromRGB(255, 0, 0), Color3.fromRGB(255, 255, 0), Color3.fromRGB(255, 255, 255)}
 local colorNames = {"YEŞİL", "KIRMIZI", "SARI", "BEYAZ"}
 local cIndex = 1
-
--- Studio ve Executor uyumlu güvenli Global tanımlama
-local safeEnv = getgenv and getgenv() or _G
-safeEnv.CrossColor = colors[cIndex] 
+CrossColor = colors[cIndex] 
 
 CreateButton(SettingsCard, "Crosshair Rengi", "Aimbot nişangahının rengini değiştirir.", 0, "YEŞİL", function(btnTxt)
     cIndex = cIndex + 1
     if cIndex > #colors then cIndex = 1 end
 
-    safeEnv.CrossColor = colors[cIndex]
+    CrossColor = colors[cIndex]
     btnTxt.Text = colorNames[cIndex]
     btnTxt.TextColor3 = colors[cIndex]
-end)
-
-CreateButton(SettingsCard, "Crosshair Rengi", "Aimbot nişangahının rengini değiştirir.", 0, "YEŞİL", function(btnTxt)
-    cIndex = cIndex + 1
-    if cIndex > #colors then cIndex = 1 end
-
-    CrossColor = colors[cIndex]
-    btnTxt.Text = colorNames[cIndex]
-    btnTxt.TextColor3 = colors[cIndex]
 end)
 -- 4. TIER (SÜRÜM) DEĞİŞTİRME SİSTEMİ
 CreateButton(SettingsCard, "Sürüm Değiştir (Tier)", "Sahip olduğunuz yetkiye göre alt sürümlere geçebilirsiniz.", 0, "GEÇİŞ YAP", function(btnTxt)
