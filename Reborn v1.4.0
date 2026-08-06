@@ -2453,7 +2453,7 @@ end)
 -- === GROQ AI SEKMESİ (DİNAMİK KODLAMA & SOHBET) ===
 -- === ASİSTAN AI SEKMESİ (YENİ SİSTEM) ===
 local HttpService = game:GetService("HttpService")
-local GroqAPIKey = "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"
+local GroqAPIKey = "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"
 local aiMode = "Chat" 
 local aiMessageCount = 0 -- Kullanım kotası
 
