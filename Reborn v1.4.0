@@ -1,3 +1,7 @@
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -26,12 +30,19 @@ ScreenGui.Name = "DarkerSH"
 ScreenGui.ResetOnSpawn = false
 pcall(function() ScreenGui.IgnoreGuiInset = true end) -- ÇÖKME ÖNLEYİCİ EKLENDİ (Eski exploitler için koruma)
 
-local success = pcall(function() 
-    -- Delta'nın desteklediği gethui() varsa onu kullanır, yoksa CoreGui dener.
-    ScreenGui.Parent = (gethui and gethui()) or CoreGui 
+local guiParent
+if gethui then
+    guiParent = gethui()
+else
+    guiParent = CoreGui
+end
+
+local success, err = pcall(function()
+    ScreenGui.Parent = guiParent
 end)
-if not success then 
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") 
+
+if not success then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
 local function MakeDraggable(gui, dragPart)
@@ -673,7 +684,7 @@ local FriendVal = CreateStatCard("ARKADAŞ DURUMU", "Yok")
 -- Gerçek Sunucu Lokasyonu için API İsteği
 local RealRegion = "Yükleniyor..."
 task.spawn(function()
-    local req = (syn and syn.request) or request or http_request or nil
+   local req = request or http_request or (syn and syn.request) or (http and http.request) or nil
     if req then
         pcall(function()
             -- IP üzerinden gerçek sunucu/istemci lokasyonunu çeker
@@ -1236,7 +1247,11 @@ CmdExec.Parent = CmdFrame
 CmdExec.MouseButton1Click:Connect(function()
     local text = CmdInput.Text
     if text ~= "" then
-        local func, err = loadstring(text)
+       if not loadstring then
+    Notify("Hata: Exploitin loadstring desteklemiyor!")
+    return
+end
+local func, err = loadstring(text)
         if func then
             task.spawn(func)
             local msg = (currentLang == "TR") and "Komut çalıştırıldı: " or "Executed: "
@@ -2898,7 +2913,19 @@ TrBtn.MouseButton1Click:Connect(function() ChangeLang("TR") end)
 local colors = {Color3.fromRGB(0, 255, 0), Color3.fromRGB(255, 0, 0), Color3.fromRGB(255, 255, 0), Color3.fromRGB(255, 255, 255)}
 local colorNames = {"YEŞİL", "KIRMIZI", "SARI", "BEYAZ"}
 local cIndex = 1
-CrossColor = colors[cIndex] -- Global atama
+
+-- Studio ve Executor uyumlu güvenli Global tanımlama
+local safeEnv = getgenv and getgenv() or _G
+safeEnv.CrossColor = colors[cIndex] 
+
+CreateButton(SettingsCard, "Crosshair Rengi", "Aimbot nişangahının rengini değiştirir.", 0, "YEŞİL", function(btnTxt)
+    cIndex = cIndex + 1
+    if cIndex > #colors then cIndex = 1 end
+
+    safeEnv.CrossColor = colors[cIndex]
+    btnTxt.Text = colorNames[cIndex]
+    btnTxt.TextColor3 = colors[cIndex]
+end)
 
 CreateButton(SettingsCard, "Crosshair Rengi", "Aimbot nişangahının rengini değiştirir.", 0, "YEŞİL", function(btnTxt)
     cIndex = cIndex + 1
@@ -3326,7 +3353,9 @@ VerifyAndLoadMenu = function(k, isAuto)
         return false
     end
 
+   if writefile then
     pcall(function() writefile("DarkerSH_Key.txt", k) end)
+end
     TierText.Text = tierName
 
     if KeyContainer then KeyContainer:Destroy() end
@@ -3706,10 +3735,13 @@ IntroVerifyBtn.MouseButton1Click:Connect(function()
 end)
 
 task.spawn(function()
-    local savedKey = nil
-    pcall(function() savedKey = readfile("DarkerSH_Key.txt") end)
-    
-    if savedKey and savedKey ~= "" then
+    local savedKey = nil
+    -- Önce dosya fonksiyonları destekleniyor mu ve dosya var mı kontrolü:
+    if isfile and readfile and isfile("DarkerSH_Key.txt") then
+        pcall(function() savedKey = readfile("DarkerSH_Key.txt") end)
+    end
+    
+    if savedKey and savedKey ~= "" then
         task.wait(0.5) 
         VerifyAndLoadMenu(savedKey, true)
         Notify("Otomatik Giriş Yapıldı: " .. savedKey)
