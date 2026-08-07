@@ -1,0 +1,812 @@
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+while not LocalPlayer do
+	Players.PlayerAdded:Wait()
+	LocalPlayer = Players.LocalPlayer
+end
+
+-- ==========================================
+-- ESKİ GUI TEMİZLİĞİ
+-- ==========================================
+pcall(function()
+	if CoreGui:FindFirstChild("ArsenalHubPremium") then CoreGui.ArsenalHubPremium:Destroy() end
+	if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("ArsenalHubPremium") then
+		LocalPlayer.PlayerGui.ArsenalHubPremium:Destroy()
+	end
+end)
+
+-- ==========================================
+-- ANA DEĞİŞKENLER VE RENK PALETİ
+-- ==========================================
+local Colors = {
+	MainBG = Color3.fromRGB(15, 15, 17),
+	SidebarBG = Color3.fromRGB(10, 10, 12),
+	CardBG = Color3.fromRGB(18, 18, 20),
+	AccentGold = Color3.fromRGB(245, 175, 45),
+	TextWhite = Color3.fromRGB(240, 240, 240),
+	TextDim = Color3.fromRGB(150, 150, 150),
+	BorderLine = Color3.fromRGB(35, 35, 40)
+}
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ArsenalHubPremium"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling 
+
+local success = pcall(function() ScreenGui.Parent = CoreGui end)
+if not success then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+-- Sürükleme Fonksiyonu
+local function MakeDraggable(gui, dragPart)
+	dragPart = dragPart or gui
+	local dragging, dragInput, dragStart, startPos
+	dragPart.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = gui.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then dragging = false end
+			end)
+		end
+	end)
+	dragPart.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then
+			local delta = input.Position - dragStart
+			gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+end
+
+-- ==========================================
+-- CANLI AKAN ALTIN ÇİZGİ EFEKTİ (UIStroke Animasyonu)
+-- ==========================================
+local function ApplyAnimatedBorder(parentObj)
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 1.2
+	stroke.Transparency = 0.2
+	stroke.Parent = parentObj
+
+	local grad = Instance.new("UIGradient")
+	grad.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 100, 20)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 215, 100)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 100, 20))
+	})
+	grad.Parent = stroke
+
+	-- Sağdan sola, soldan sağa akış döngüsü
+	task.spawn(function()
+		while stroke and stroke.Parent do
+			TweenService:Create(grad, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Offset = Vector2.new(1, 0)}):Play()
+			task.wait(2.5)
+			TweenService:Create(grad, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Offset = Vector2.new(-1, 0)}):Play()
+			task.wait(2.5)
+		end
+	end)
+	return stroke
+end
+
+-- ==========================================
+-- ANA ÇERÇEVE (MAIN FRAME)
+-- ==========================================
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 950, 0, 600)
+MainFrame.Position = UDim2.new(0.5, -475, 0.5, -300)
+MainFrame.BackgroundColor3 = Colors.MainBG
+MainFrame.BorderSizePixel = 0
+MainFrame.ZIndex = 1
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+-- Ana Çerçeve İçin Canlı Akan Altın Dış Çizgi
+ApplyAnimatedBorder(MainFrame)
+
+-- Arka Plan İçin Hareketli Altın-Siyah Wave Gradient
+local BGGradientOverlay = Instance.new("Frame")
+BGGradientOverlay.Size = UDim2.new(1, 0, 1, 0)
+BGGradientOverlay.BackgroundTransparency = 0.3
+BGGradientOverlay.BorderSizePixel = 0
+BGGradientOverlay.ZIndex = 1
+BGGradientOverlay.Parent = MainFrame
+Instance.new("UICorner", BGGradientOverlay).CornerRadius = UDim.new(0, 12)
+
+local BGGradient = Instance.new("UIGradient")
+BGGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0.0, Color3.fromRGB(15, 15, 17)),
+	ColorSequenceKeypoint.new(0.3, Color3.fromRGB(50, 38, 12)),
+	ColorSequenceKeypoint.new(0.6, Color3.fromRGB(20, 18, 15)),
+	ColorSequenceKeypoint.new(1.0, Color3.fromRGB(10, 10, 12))
+})
+BGGradient.Rotation = 45
+BGGradient.Parent = BGGradientOverlay
+
+-- Arka plan renk geçişlerinin dalga gibi süzülmesi için döngü
+task.spawn(function()
+	while BGGradient and BGGradient.Parent do
+		TweenService:Create(BGGradient, TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Rotation = 135}):Play()
+		task.wait(4)
+		TweenService:Create(BGGradient, TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Rotation = 45}):Play()
+		task.wait(4)
+	end
+end)
+
+local TopDragArea = Instance.new("Frame")
+TopDragArea.Size = UDim2.new(1, 0, 0, 40)
+TopDragArea.BackgroundTransparency = 1
+TopDragArea.ZIndex = 10
+TopDragArea.Parent = MainFrame
+MakeDraggable(MainFrame, TopDragArea)
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -40, 0, 10)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "X"
+CloseBtn.Font = Enum.Font.GothamMedium
+CloseBtn.TextColor3 = Colors.TextDim
+CloseBtn.TextSize = 14
+CloseBtn.ZIndex = 15
+CloseBtn.Parent = TopDragArea
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -75, 0, 10)
+MinimizeBtn.BackgroundTransparency = 1
+MinimizeBtn.Text = "-"
+MinimizeBtn.Font = Enum.Font.GothamMedium
+MinimizeBtn.TextColor3 = Colors.TextDim
+MinimizeBtn.TextSize = 20
+MinimizeBtn.ZIndex = 15
+MinimizeBtn.Parent = TopDragArea
+
+-- ==========================================
+-- SIDEBAR (SOL MENÜ)
+-- ==========================================
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 200, 1, 0)
+Sidebar.BackgroundColor3 = Colors.SidebarBG
+Sidebar.BackgroundTransparency = 0.2 -- Arka plandaki wave gradient hafifçe sızsın diye
+Sidebar.BorderSizePixel = 0
+Sidebar.ZIndex = 2
+Sidebar.Parent = MainFrame
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
+
+local SidebarSeparator = Instance.new("Frame")
+SidebarSeparator.Size = UDim2.new(0, 1, 1, 0)
+SidebarSeparator.Position = UDim2.new(1, 0, 0, 0)
+SidebarSeparator.BackgroundColor3 = Colors.BorderLine
+SidebarSeparator.BorderSizePixel = 0
+SidebarSeparator.ZIndex = 3
+SidebarSeparator.Parent = Sidebar
+
+-- ==========================================
+-- LOGO VE BAŞLIK
+-- ==========================================
+local LogoIcon = Instance.new("ImageLabel")
+LogoIcon.Size = UDim2.new(0, 64, 0, 64)
+LogoIcon.Position = UDim2.new(0, 5, 0, 8)
+LogoIcon.BackgroundTransparency = 1 
+LogoIcon.Image = "rbxassetid://88745610562429"
+LogoIcon.ImageColor3 = Color3.new(1, 1, 1) 
+LogoIcon.ImageTransparency = 0 
+LogoIcon.ZIndex = 5 
+LogoIcon.ScaleType = Enum.ScaleType.Fit
+LogoIcon.Parent = Sidebar
+
+local LogoText = Instance.new("TextLabel")
+LogoText.Size = UDim2.new(0, 120, 0, 35)
+LogoText.Position = UDim2.new(0, 75, 0, 22) 
+LogoText.BackgroundTransparency = 1
+LogoText.Text = "ARSENAL HUB\n<font color='rgb(150,150,150)' size='10'>PREMIUM</font>"
+LogoText.RichText = true
+LogoText.Font = Enum.Font.GothamBold
+LogoText.TextColor3 = Colors.TextWhite
+LogoText.TextSize = 14
+LogoText.TextXAlignment = Enum.TextXAlignment.Left
+LogoText.ZIndex = 5
+LogoText.Parent = Sidebar
+
+-- TAB KONTEYNERİ
+local TabListContainer = Instance.new("Frame")
+TabListContainer.Size = UDim2.new(1, 0, 1, -180)
+TabListContainer.Position = UDim2.new(0, 0, 0, 80)
+TabListContainer.BackgroundTransparency = 1
+TabListContainer.ZIndex = 3 
+TabListContainer.Parent = Sidebar
+
+local TabListLayout = Instance.new("UIListLayout")
+TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabListLayout.Padding = UDim.new(0, 5)
+TabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+TabListLayout.Parent = TabListContainer
+
+-- Profil (En Alt)
+local ProfileCard = Instance.new("Frame")
+ProfileCard.Size = UDim2.new(0, 160, 0, 60)
+ProfileCard.Position = UDim2.new(0, 20, 1, -80)
+ProfileCard.BackgroundColor3 = Colors.MainBG
+ProfileCard.ZIndex = 4
+Instance.new("UICorner", ProfileCard).CornerRadius = UDim.new(0, 8)
+ApplyAnimatedBorder(ProfileCard) -- Profil kartına da canlı altın çizgi
+ProfileCard.Parent = Sidebar
+
+local AvatarCircle = Instance.new("Frame")
+AvatarCircle.Size = UDim2.new(0, 40, 0, 40)
+AvatarCircle.Position = UDim2.new(0, 10, 0, 10)
+AvatarCircle.BackgroundColor3 = Colors.SidebarBG
+AvatarCircle.ZIndex = 5
+Instance.new("UICorner", AvatarCircle).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", AvatarCircle).Color = Color3.fromRGB(50, 50, 55)
+AvatarCircle.Parent = ProfileCard
+
+local AvatarTxt = Instance.new("TextLabel")
+AvatarTxt.Size = UDim2.new(1, 0, 1, 0)
+AvatarTxt.BackgroundTransparency = 1
+AvatarTxt.Text = "U"
+AvatarTxt.Font = Enum.Font.GothamMedium
+AvatarTxt.TextColor3 = Colors.AccentGold
+AvatarTxt.TextSize = 18
+AvatarTxt.ZIndex = 6
+AvatarTxt.Parent = AvatarCircle
+
+local OnlineDot = Instance.new("Frame")
+OnlineDot.Size = UDim2.new(0, 10, 0, 10)
+OnlineDot.Position = UDim2.new(1, -12, 1, -10)
+OnlineDot.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+OnlineDot.ZIndex = 6
+Instance.new("UICorner", OnlineDot).CornerRadius = UDim.new(1, 0)
+OnlineDot.Parent = AvatarCircle
+
+local ProfileName = Instance.new("TextLabel")
+ProfileName.Size = UDim2.new(0, 90, 0, 20)
+ProfileName.Position = UDim2.new(0, 60, 0, 10)
+ProfileName.BackgroundTransparency = 1
+ProfileName.Text = "User"
+ProfileName.Font = Enum.Font.GothamBold
+ProfileName.TextColor3 = Colors.TextWhite
+ProfileName.TextSize = 13
+ProfileName.TextXAlignment = Enum.TextXAlignment.Left
+ProfileName.ZIndex = 5
+ProfileName.Parent = ProfileCard
+
+local ProfileTier = Instance.new("TextLabel")
+ProfileTier.Size = UDim2.new(0, 90, 0, 15)
+ProfileTier.Position = UDim2.new(0, 60, 0, 30)
+ProfileTier.BackgroundTransparency = 1
+ProfileTier.Text = "Premium\n<font color='rgb(100,100,100)'>Lifetime</font>"
+ProfileTier.RichText = true
+ProfileTier.Font = Enum.Font.GothamMedium
+ProfileTier.TextColor3 = Colors.AccentGold
+ProfileTier.TextSize = 11
+ProfileTier.TextXAlignment = Enum.TextXAlignment.Left
+ProfileTier.ZIndex = 5
+ProfileTier.Parent = ProfileCard
+
+-- ==========================================
+-- SEKME (TAB) SİSTEMİ MANTIĞI
+-- ==========================================
+local ContentContainer = Instance.new("Frame")
+ContentContainer.Size = UDim2.new(1, -200, 1, 0)
+ContentContainer.Position = UDim2.new(0, 200, 0, 0)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.ZIndex = 2
+ContentContainer.Parent = MainFrame
+
+local Tabs = {}
+
+local function SwitchTab(tabName)
+	for tName, tabData in pairs(Tabs) do
+		if tName == tabName then
+			tabData.Page.Visible = true
+			tabData.Button.BackgroundTransparency = 0
+			tabData.Indicator.Visible = true
+			tabData.Icon.ImageColor3 = Colors.AccentGold
+			tabData.Text.TextColor3 = Colors.AccentGold
+		else
+			tabData.Page.Visible = false
+			tabData.Button.BackgroundTransparency = 1
+			tabData.Indicator.Visible = false
+			tabData.Icon.ImageColor3 = Colors.TextDim
+			tabData.Text.TextColor3 = Colors.TextDim
+		end
+	end
+end
+
+local function CreateTab(name, iconId, isDefault)
+	local TabBtn = Instance.new("TextButton")
+	TabBtn.Size = UDim2.new(0, 170, 0, 40)
+	TabBtn.BackgroundColor3 = Color3.fromRGB(22, 20, 15)
+	TabBtn.BackgroundTransparency = isDefault and 0 or 1
+	TabBtn.Text = ""
+	TabBtn.AutoButtonColor = false
+	TabBtn.ZIndex = 5 
+	Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 8)
+	TabBtn.Parent = TabListContainer
+
+	local ActiveIndicator = Instance.new("Frame")
+	ActiveIndicator.Size = UDim2.new(0, 3, 0, 20)
+	ActiveIndicator.Position = UDim2.new(0, 5, 0.5, -10)
+	ActiveIndicator.BackgroundColor3 = Colors.AccentGold
+	ActiveIndicator.Visible = isDefault
+	ActiveIndicator.ZIndex = 6
+	Instance.new("UICorner", ActiveIndicator).CornerRadius = UDim.new(1, 0)
+	ActiveIndicator.Parent = TabBtn
+
+	local Icon = Instance.new("ImageLabel")
+	Icon.Size = UDim2.new(0, 18, 0, 18)
+	Icon.Position = UDim2.new(0, 20, 0.5, -9)
+	Icon.BackgroundTransparency = 1
+	Icon.Image = iconId
+	Icon.ImageColor3 = isDefault and Colors.AccentGold or Colors.TextDim
+	Icon.ZIndex = 6
+	Icon.Parent = TabBtn
+
+	local TabText = Instance.new("TextLabel")
+	TabText.Size = UDim2.new(1, -50, 1, 0)
+	TabText.Position = UDim2.new(0, 45, 0, 0)
+	TabText.BackgroundTransparency = 1
+	TabText.Text = name
+	TabText.Font = Enum.Font.GothamMedium
+	TabText.TextColor3 = isDefault and Colors.AccentGold or Colors.TextDim
+	TabText.TextSize = 13
+	TabText.TextXAlignment = Enum.TextXAlignment.Left
+	TabText.ZIndex = 6
+	TabText.Parent = TabBtn
+
+	local TabPage = Instance.new("Frame")
+	TabPage.Size = UDim2.new(1, 0, 1, 0)
+	TabPage.BackgroundTransparency = 1
+	TabPage.Visible = isDefault
+	TabPage.ZIndex = 2
+	TabPage.Parent = ContentContainer
+
+	Tabs[name] = {Button = TabBtn, Page = TabPage, Indicator = ActiveIndicator, Icon = Icon, Text = TabText}
+
+	TabBtn.MouseButton1Click:Connect(function()
+		SwitchTab(name)
+	end)
+
+	return TabPage
+end
+
+-- SEKMELERİN OLUŞTURULMASI
+local HomeTab = CreateTab("Home", "rbxassetid://7733960981", true)
+local AimbotTab = CreateTab("Aimbot", "rbxassetid://6034287514", false)
+local EspTab = CreateTab("Esp", "rbxassetid://7733774602", false)
+local VisualsTab = CreateTab("Visuals", "rbxassetid://7733993211", false)
+local WeaponTab = CreateTab("Weapon", "rbxassetid://7734068321", false)
+local MovementTab = CreateTab("Movement", "rbxassetid://8997385940", false)
+local MiscTab = CreateTab("Misc", "rbxassetid://7733799185", false)
+local PlayersTab = CreateTab("Players", "rbxassetid://7733920644", false)
+local SettingsTab = CreateTab("Settings", "rbxassetid://6031280882", false)
+
+-- PLACEHOLDER TEXTLER
+local function AddPlaceholderText(tabPage, tabName)
+	local PageTitle = Instance.new("TextLabel")
+	PageTitle.Size = UDim2.new(1, -40, 0, 30)
+	PageTitle.Position = UDim2.new(0, 30, 0, 30)
+	PageTitle.BackgroundTransparency = 1
+	PageTitle.Text = tabName .. " Content"
+	PageTitle.Font = Enum.Font.GothamBold
+	PageTitle.TextColor3 = Colors.AccentGold
+	PageTitle.TextSize = 24
+	PageTitle.TextXAlignment = Enum.TextXAlignment.Left
+	PageTitle.ZIndex = 5
+	PageTitle.Parent = tabPage
+end
+
+AddPlaceholderText(AimbotTab, "Aimbot Settings")
+AddPlaceholderText(EspTab, "ESP Configuration")
+AddPlaceholderText(VisualsTab, "Visuals Options")
+AddPlaceholderText(WeaponTab, "Weapon Mods")
+AddPlaceholderText(MovementTab, "Movement Features")
+AddPlaceholderText(MiscTab, "Miscellaneous")
+AddPlaceholderText(PlayersTab, "Player List")
+AddPlaceholderText(SettingsTab, "Hub Settings")
+
+-- ==========================================
+-- HOME SAYFASI TASARIMI
+-- ==========================================
+local PageTitle = Instance.new("TextLabel")
+PageTitle.Size = UDim2.new(1, -40, 0, 30)
+PageTitle.Position = UDim2.new(0, 30, 0, 30)
+PageTitle.BackgroundTransparency = 1
+PageTitle.Text = "Home"
+PageTitle.Font = Enum.Font.GothamBold
+PageTitle.TextColor3 = Colors.TextWhite
+PageTitle.TextSize = 20
+PageTitle.TextXAlignment = Enum.TextXAlignment.Left
+PageTitle.ZIndex = 5
+PageTitle.Parent = HomeTab
+
+local PageSubTitle = Instance.new("TextLabel")
+PageSubTitle.Size = UDim2.new(1, -40, 0, 20)
+PageSubTitle.Position = UDim2.new(0, 30, 0, 55)
+PageSubTitle.BackgroundTransparency = 1
+PageSubTitle.Text = "Welcome back, <font color='rgb(245,175,45)'>User.</font>"
+PageSubTitle.RichText = true
+PageSubTitle.Font = Enum.Font.Gotham
+PageSubTitle.TextColor3 = Colors.TextDim
+PageSubTitle.TextSize = 13
+PageSubTitle.TextXAlignment = Enum.TextXAlignment.Left
+PageSubTitle.ZIndex = 5
+PageSubTitle.Parent = HomeTab
+
+local BannerFrame = Instance.new("Frame")
+BannerFrame.Size = UDim2.new(1, -60, 0, 120)
+BannerFrame.Position = UDim2.new(0, 30, 0, 90)
+BannerFrame.BackgroundColor3 = Colors.CardBG
+BannerFrame.BorderSizePixel = 0
+BannerFrame.ZIndex = 4
+Instance.new("UICorner", BannerFrame).CornerRadius = UDim.new(0, 10)
+ApplyAnimatedBorder(BannerFrame) -- Banner kartına da canlı altın çizgi
+BannerFrame.Parent = HomeTab
+
+local BannerImg = Instance.new("ImageLabel")
+BannerImg.Size = UDim2.new(1, 0, 1, 0)
+BannerImg.BackgroundTransparency = 1
+BannerImg.Image = "rbxassetid://7335607066" 
+BannerImg.ImageTransparency = 0.85
+BannerImg.ScaleType = Enum.ScaleType.Crop
+BannerImg.ZIndex = 4
+Instance.new("UICorner", BannerImg).CornerRadius = UDim.new(0, 10)
+BannerImg.Parent = BannerFrame
+
+local BannerTitle = Instance.new("TextLabel")
+BannerTitle.Size = UDim2.new(0.6, 0, 0, 30)
+BannerTitle.Position = UDim2.new(0, 20, 0, 25)
+BannerTitle.BackgroundTransparency = 1
+BannerTitle.Text = "Arsenal / Counter Blox Hub"
+BannerTitle.Font = Enum.Font.GothamBold
+BannerTitle.TextColor3 = Colors.TextWhite
+BannerTitle.TextSize = 18
+BannerTitle.TextXAlignment = Enum.TextXAlignment.Left
+BannerTitle.ZIndex = 5
+BannerTitle.Parent = BannerFrame
+
+local BannerDesc = Instance.new("TextLabel")
+BannerDesc.Size = UDim2.new(0.6, 0, 0, 20)
+BannerDesc.Position = UDim2.new(0, 20, 0, 55)
+BannerDesc.BackgroundTransparency = 1
+BannerDesc.Text = "Premium features for a better experience."
+BannerDesc.Font = Enum.Font.Gotham
+BannerDesc.TextColor3 = Colors.TextDim
+BannerDesc.TextSize = 12
+BannerDesc.TextXAlignment = Enum.TextXAlignment.Left
+BannerDesc.ZIndex = 5
+BannerDesc.Parent = BannerFrame
+
+local BannerStatus = Instance.new("TextLabel")
+BannerStatus.Size = UDim2.new(0.8, 0, 0, 20)
+BannerStatus.Position = UDim2.new(0, 20, 0, 85)
+BannerStatus.BackgroundTransparency = 1
+BannerStatus.Text = "<font color='rgb(245,175,45)'>●</font> Status: <font color='rgb(50,200,50)'>Attached</font>   |   Game: Arsenal   |   FPS: <font color='rgb(50,200,50)'>144</font>"
+BannerStatus.RichText = true
+BannerStatus.Font = Enum.Font.GothamMedium
+BannerStatus.TextColor3 = Colors.TextWhite
+BannerStatus.TextSize = 12
+BannerStatus.TextXAlignment = Enum.TextXAlignment.Left
+BannerStatus.ZIndex = 5
+BannerStatus.Parent = BannerFrame
+
+-- Quick Access Bölümü
+local QuickAccessTitle = Instance.new("TextLabel")
+QuickAccessTitle.Size = UDim2.new(1, -60, 0, 20)
+QuickAccessTitle.Position = UDim2.new(0, 30, 0, 230)
+QuickAccessTitle.BackgroundTransparency = 1
+QuickAccessTitle.Text = "Quick Access"
+QuickAccessTitle.Font = Enum.Font.GothamBold
+QuickAccessTitle.TextColor3 = Colors.TextWhite
+QuickAccessTitle.TextSize = 13
+QuickAccessTitle.TextXAlignment = Enum.TextXAlignment.Left
+QuickAccessTitle.ZIndex = 5
+QuickAccessTitle.Parent = HomeTab
+
+local QuickAccessGrid = Instance.new("Frame")
+QuickAccessGrid.Size = UDim2.new(1, -60, 0, 110)
+QuickAccessGrid.Position = UDim2.new(0, 30, 0, 260)
+QuickAccessGrid.BackgroundTransparency = 1
+QuickAccessGrid.ZIndex = 4
+QuickAccessGrid.Parent = HomeTab
+
+local QA_Layout = Instance.new("UIGridLayout")
+QA_Layout.CellSize = UDim2.new(0.185, 0, 1, 0)
+QA_Layout.CellPadding = UDim2.new(0.018, 0, 0, 0)
+QA_Layout.SortOrder = Enum.SortOrder.LayoutOrder
+QA_Layout.Parent = QuickAccessGrid
+
+local function CreateQACard(iconId, title, desc, tabToSwitch)
+	local Card = Instance.new("TextButton")
+	Card.BackgroundColor3 = Colors.CardBG
+	Card.Text = ""
+	Card.AutoButtonColor = false
+	Card.ZIndex = 5
+	Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 10)
+	
+	-- Quick Access Kartları İçin Hareketli Altın-Siyah Wave Gradient Arka Plan
+	local QACardOverlay = Instance.new("Frame")
+	QACardOverlay.Size = UDim2.new(1, 0, 1, 0)
+	QACardOverlay.BackgroundTransparency = 0.2
+	QACardOverlay.BorderSizePixel = 0
+	QACardOverlay.ZIndex = 5
+	QACardOverlay.Parent = Card
+	Instance.new("UICorner", QACardOverlay).CornerRadius = UDim.new(0, 10)
+
+	local QAGradient = Instance.new("UIGradient")
+	QAGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(20, 18, 12)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(60, 45, 15)),
+		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(20, 18, 12))
+	})
+	QAGradient.Rotation = 30
+	QAGradient.Parent = QACardOverlay
+
+	-- Kartlar için ayrı dalgalı gradient akış döngüsü
+	task.spawn(function()
+		while QAGradient and QAGradient.Parent do
+			TweenService:Create(QAGradient, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Rotation = 150}):Play()
+			task.wait(3)
+			TweenService:Create(QAGradient, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Rotation = 30}):Play()
+			task.wait(3)
+		end
+	end)
+
+	-- Quick Access kartlarına da canlı akan altın dış çizgi
+	ApplyAnimatedBorder(Card)
+	Card.Parent = QuickAccessGrid
+	
+	local Icon = Instance.new("ImageLabel")
+	Icon.Size = UDim2.new(0, 28, 0, 28)
+	Icon.Position = UDim2.new(0.5, -14, 0, 20)
+	Icon.BackgroundTransparency = 1
+	Icon.Image = iconId
+	Icon.ImageColor3 = Colors.AccentGold
+	Icon.ZIndex = 6
+	Icon.Parent = Card
+	
+	local TxtTitle = Instance.new("TextLabel")
+	TxtTitle.Size = UDim2.new(1, 0, 0, 20)
+	TxtTitle.Position = UDim2.new(0, 0, 0, 55)
+	TxtTitle.BackgroundTransparency = 1
+	TxtTitle.Text = title
+	TxtTitle.Font = Enum.Font.GothamBold
+	TxtTitle.TextColor3 = Colors.TextWhite
+	TxtTitle.TextSize = 13
+	TxtTitle.ZIndex = 6
+	TxtTitle.Parent = Card
+	
+	local TxtDesc = Instance.new("TextLabel")
+	TxtDesc.Size = UDim2.new(1, -10, 0, 30)
+	TxtDesc.Position = UDim2.new(0, 5, 0, 75)
+	TxtDesc.BackgroundTransparency = 1
+	TxtDesc.Text = desc
+	TxtDesc.Font = Enum.Font.Gotham
+	TxtDesc.TextColor3 = Colors.TextDim
+	TxtDesc.TextSize = 11
+	TxtDesc.TextWrapped = true
+	TxtDesc.ZIndex = 6
+	TxtDesc.Parent = Card
+	
+	Card.MouseEnter:Connect(function() TweenService:Create(QACardOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play() end)
+	Card.MouseLeave:Connect(function() TweenService:Create(QACardOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 0.2}):Play() end)
+	
+	if tabToSwitch then
+		Card.MouseButton1Click:Connect(function()
+			SwitchTab(tabToSwitch)
+		end)
+	end
+end
+
+CreateQACard("rbxassetid://6034287514", "Aimbot", "Configure aimbot settings", "Aimbot")
+CreateQACard("rbxassetid://7733774602", "ESP", "Set up ESP options", "Esp")
+CreateQACard("rbxassetid://7734068321", "Weapon", "Weapon mods & settings", "Weapon")
+CreateQACard("rbxassetid://8997385940", "Movement", "Movement features", "Movement")
+CreateQACard("rbxassetid://7733799185", "Misc", "Miscellaneous features", "Misc")
+
+-- ==========================================
+-- ALT BİLGİ PANELLERİ
+-- ==========================================
+local BottomPanels = Instance.new("Frame")
+BottomPanels.Size = UDim2.new(1, -60, 0, 160)
+BottomPanels.Position = UDim2.new(0, 30, 0, 390)
+BottomPanels.BackgroundTransparency = 1
+BottomPanels.ZIndex = 4
+BottomPanels.Parent = HomeTab
+
+local BP_Layout = Instance.new("UIListLayout")
+BP_Layout.FillDirection = Enum.FillDirection.Horizontal
+BP_Layout.Padding = UDim.new(0.02, 0)
+BP_Layout.SortOrder = Enum.SortOrder.LayoutOrder
+BP_Layout.Parent = BottomPanels
+
+local function CreateBottomCard(title, iconId)
+	local Card = Instance.new("Frame")
+	Card.Size = UDim2.new(0.32, 0, 1, 0)
+	Card.BackgroundColor3 = Colors.CardBG
+	Card.ZIndex = 5
+	Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 10)
+	ApplyAnimatedBorder(Card) -- Alt kartlara da canlı altın çizgi
+	Card.Parent = BottomPanels
+	
+	local CIcon = Instance.new("ImageLabel")
+	CIcon.Size = UDim2.new(0, 14, 0, 14)
+	CIcon.Position = UDim2.new(0, 15, 0, 14)
+	CIcon.BackgroundTransparency = 1
+	CIcon.Image = iconId or "rbxassetid://3926305904"
+	CIcon.ImageColor3 = Colors.TextDim
+	CIcon.ZIndex = 6
+	CIcon.Parent = Card
+
+	local CTitle = Instance.new("TextLabel")
+	CTitle.Size = UDim2.new(1, -40, 0, 20)
+	CTitle.Position = UDim2.new(0, 35, 0, 11)
+	CTitle.BackgroundTransparency = 1
+	CTitle.Text = title
+	CTitle.Font = Enum.Font.GothamBold
+	CTitle.TextColor3 = Colors.TextWhite
+	CTitle.TextSize = 12
+	CTitle.TextXAlignment = Enum.TextXAlignment.Left
+	CTitle.ZIndex = 6
+	CTitle.Parent = Card
+	
+	local HeaderDivider = Instance.new("Frame")
+	HeaderDivider.Size = UDim2.new(1, 0, 0, 1)
+	HeaderDivider.Position = UDim2.new(0, 0, 0, 35)
+	HeaderDivider.BackgroundColor3 = Colors.BorderLine
+	HeaderDivider.BorderSizePixel = 0
+	HeaderDivider.ZIndex = 6
+	HeaderDivider.Parent = Card
+
+	return Card
+end
+
+-- 1. System Info Card
+local SysCard = CreateBottomCard("System Info", "rbxassetid://7733964719")
+local SysLines = {
+	{"Platform:", "Windows 11 (64-bit)", Colors.AccentGold},
+	{"Executor:", "Synapse X", Colors.TextWhite},
+	{"Version:", "v2.3.7 Premium", Colors.AccentGold},
+	{"Last Update:", "25.05.2025", Colors.TextWhite}
+}
+for i, line in ipairs(SysLines) do
+	local L = Instance.new("TextLabel")
+	L.Size = UDim2.new(1, -30, 0, 20)
+	L.Position = UDim2.new(0, 15, 0, 25 + (i * 23)) 
+	L.BackgroundTransparency = 1
+	L.Text = line[1]
+	L.Font = Enum.Font.Gotham
+	L.TextColor3 = Colors.TextDim
+	L.TextSize = 11
+	L.TextXAlignment = Enum.TextXAlignment.Left
+	L.ZIndex = 6
+	L.Parent = SysCard
+	
+	local V = Instance.new("TextLabel")
+	V.Size = UDim2.new(1, -30, 0, 20)
+	V.Position = UDim2.new(0, 15, 0, 25 + (i * 23))
+	V.BackgroundTransparency = 1
+	V.Text = line[2]
+	V.Font = Enum.Font.GothamBold
+	V.TextColor3 = line[3]
+	V.TextSize = 11
+	V.TextXAlignment = Enum.TextXAlignment.Right
+	V.ZIndex = 6
+	V.Parent = SysCard
+end
+
+-- 2. Performance Card 
+local PerfCard = CreateBottomCard("Performance", "rbxassetid://7733765398")
+
+local function CreatePerfItem(parent, yPos, label, valueStr, hasBar, barScale, isGreen)
+	local L = Instance.new("TextLabel")
+	L.Size = UDim2.new(1, -30, 0, 15)
+	L.Position = UDim2.new(0, 15, 0, yPos)
+	L.BackgroundTransparency = 1
+	L.Text = label
+	L.Font = Enum.Font.Gotham
+	L.TextColor3 = Colors.TextDim
+	L.TextSize = 11
+	L.TextXAlignment = Enum.TextXAlignment.Left
+	L.ZIndex = 6
+	L.Parent = parent
+	
+	local V = Instance.new("TextLabel")
+	V.Size = UDim2.new(1, -30, 0, 15)
+	V.Position = UDim2.new(0, 15, 0, yPos)
+	V.BackgroundTransparency = 1
+	V.Text = valueStr
+	V.Font = Enum.Font.GothamBold
+	V.TextColor3 = isGreen and Color3.fromRGB(50, 200, 50) or Colors.TextWhite
+	V.TextSize = 11
+	V.TextXAlignment = Enum.TextXAlignment.Right
+	V.ZIndex = 6
+	V.Parent = parent
+	
+	if hasBar then
+		local BarBG = Instance.new("Frame")
+		BarBG.Size = UDim2.new(1, -30, 0, 4)
+		BarBG.Position = UDim2.new(0, 15, 0, yPos + 18)
+		BarBG.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		BarBG.ZIndex = 6
+		Instance.new("UICorner", BarBG).CornerRadius = UDim.new(1, 0)
+		BarBG.Parent = parent
+		
+		local BarFill = Instance.new("Frame")
+		BarFill.Size = UDim2.new(barScale, 0, 1, 0)
+		BarFill.BackgroundColor3 = Colors.AccentGold
+		BarFill.ZIndex = 7
+		Instance.new("UICorner", BarFill).CornerRadius = UDim.new(1, 0)
+		BarFill.Parent = BarBG
+	end
+end
+
+CreatePerfItem(PerfCard, 50, "Server-Location", "Frankfurt, DE", false, 0, false)
+CreatePerfItem(PerfCard, 85, "FPS", "144", true, 0.9, false)
+CreatePerfItem(PerfCard, 125, "Ping", "38ms", true, 0.15, true)
+
+-- 3. Updates Card
+local UpdCard = CreateBottomCard("Updates", "rbxassetid://7733779610")
+local UpdInfo = Instance.new("TextLabel")
+UpdInfo.Size = UDim2.new(1, -30, 0, 40)
+UpdInfo.Position = UDim2.new(0, 15, 0, 55)
+UpdInfo.BackgroundTransparency = 1
+UpdInfo.Text = "<font color='rgb(50,200,50)'>You are using the latest version.</font>\nAll features are up to date."
+UpdInfo.RichText = true
+UpdInfo.Font = Enum.Font.Gotham
+UpdInfo.TextColor3 = Colors.TextDim
+UpdInfo.TextSize = 11
+UpdInfo.ZIndex = 6
+UpdInfo.Parent = UpdCard
+
+local CheckBtn = Instance.new("TextButton")
+CheckBtn.Size = UDim2.new(1, -40, 0, 30)
+CheckBtn.Position = UDim2.new(0, 20, 1, -45)
+CheckBtn.BackgroundColor3 = Color3.fromRGB(35, 30, 15)
+CheckBtn.ZIndex = 6
+Instance.new("UICorner", CheckBtn).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", CheckBtn).Color = Colors.AccentGold
+CheckBtn.Text = "Check for Updates"
+CheckBtn.Font = Enum.Font.GothamMedium
+CheckBtn.TextColor3 = Colors.AccentGold
+CheckBtn.TextSize = 12
+CheckBtn.Parent = UpdCard
+
+-- ==========================================
+-- FOOTER (EN ALT YAZILAR)
+-- ==========================================
+local FooterLeft = Instance.new("TextLabel")
+FooterLeft.Size = UDim2.new(0.5, 0, 0, 20)
+FooterLeft.Position = UDim2.new(0, 30, 1, -30)
+FooterLeft.BackgroundTransparency = 1
+FooterLeft.Text = "Arsenal Hub <font color='rgb(245,175,45)'>Premium</font> - Built for performance."
+FooterLeft.RichText = true
+FooterLeft.Font = Enum.Font.Gotham
+FooterLeft.TextColor3 = Colors.TextDim
+FooterLeft.TextSize = 11
+FooterLeft.TextXAlignment = Enum.TextXAlignment.Left
+FooterLeft.ZIndex = 4
+FooterLeft.Parent = ContentContainer
+
+local FooterRight = Instance.new("TextLabel")
+FooterRight.Size = UDim2.new(0.5, -30, 0, 20)
+FooterRight.Position = UDim2.new(0.5, 0, 1, -30)
+FooterRight.BackgroundTransparency = 1
+FooterRight.Text = "Safe. Undetected. Trusted."
+FooterRight.Font = Enum.Font.Gotham
+FooterRight.TextColor3 = Colors.TextDim
+FooterRight.TextSize = 11
+FooterRight.TextXAlignment = Enum.TextXAlignment.Right
+FooterRight.ZIndex = 4
+FooterRight.Parent = ContentContainer
+
+print("Premium Wave Gradient GUI Loaded")
