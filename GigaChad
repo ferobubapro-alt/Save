@@ -1,0 +1,498 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Stats = game:GetService("Stats")
+local ContentProvider = game:GetService("ContentProvider")
+
+local player = Players.LocalPlayer
+
+-- UI Oluşturma Yardımcı Fonksiyonu
+local function create(className, properties)
+	local inst = Instance.new(className)
+	for k, v in pairs(properties or {}) do
+		inst[k] = v
+	end
+	return inst
+end
+
+-- Ana GUI
+local GigaChadHub = create("ScreenGui", {
+	Name = "GigaChadHub",
+	Parent = player:WaitForChild("PlayerGui"),
+	ResetOnSpawn = false,
+	IgnoreGuiInset = true,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+})
+
+-- Renkler ve Temalar
+local ColorDarkGrey = Color3.fromRGB(20, 20, 20)
+local ColorLightGrey = Color3.fromRGB(45, 45, 45)
+local ColorGreen = Color3.fromRGB(46, 204, 113)
+local ColorWhite = Color3.fromRGB(255, 255, 255)
+
+local function applyWaveGradient(parent)
+	parent.BackgroundColor3 = ColorWhite 
+	
+	local gradient = create("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, ColorDarkGrey),
+			ColorSequenceKeypoint.new(0.5, ColorLightGrey),
+			ColorSequenceKeypoint.new(1, ColorDarkGrey)
+		}),
+		Rotation = 45,
+		Parent = parent
+	})
+	
+	RunService.RenderStepped:Connect(function()
+		local time = tick() * 0.4
+		gradient.Offset = Vector2.new(math.sin(time), math.cos(time)) * 0.3
+	end)
+end
+
+local function applyStroke(parent)
+	create("UIStroke", {
+		Color = Color3.fromRGB(80, 80, 80),
+		Thickness = 1,
+		Parent = parent
+	})
+end
+
+-- ==========================================
+-- 1. YÜKLEME EKRANI (LOADING EKRANI)
+-- ==========================================
+local LoadingFrame = create("Frame", {
+	Size = UDim2.new(1, 0, 1, 0),
+	Parent = GigaChadHub,
+	ZIndex = 100
+})
+applyWaveGradient(LoadingFrame)
+
+local LogoBig = create("ImageLabel", {
+	Size = UDim2.new(0, 300, 0, 300),
+	Position = UDim2.new(0.5, -150, 0.4, -150),
+	BackgroundTransparency = 1,
+	Image = "rbxassetid://7534312534", -- LOGO ID
+	ZIndex = 101,
+	Parent = LoadingFrame
+})
+
+local LoadingText = create("TextLabel", {
+	Size = UDim2.new(0, 300, 0, 50),
+	Position = UDim2.new(0.5, -150, 0.4, 160),
+	BackgroundTransparency = 1,
+	Text = "Loading scripts...",
+	TextColor3 = ColorWhite,
+	Font = Enum.Font.GothamBold,
+	TextSize = 24,
+	ZIndex = 101,
+	Parent = LoadingFrame
+})
+
+-- ==========================================
+-- 2. KEY SİSTEMİ
+-- ==========================================
+local KeyFrame = create("Frame", {
+	Size = UDim2.new(0, 400, 0, 250),
+	Position = UDim2.new(0.5, -200, -0.5, -125),
+	Parent = GigaChadHub,
+	ZIndex = 50,
+	ClipsDescendants = true
+})
+applyWaveGradient(KeyFrame)
+applyStroke(KeyFrame)
+create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = KeyFrame })
+
+local KeyTitle = create("TextLabel", {
+	Size = UDim2.new(1, 0, 0, 50),
+	BackgroundTransparency = 1,
+	Text = "GIGACHAD HUB | KEY SYSTEM",
+	TextColor3 = ColorWhite,
+	Font = Enum.Font.GothamBold,
+	TextSize = 20,
+	ZIndex = 51,
+	Parent = KeyFrame
+})
+
+local KeyInput = create("TextBox", {
+	Size = UDim2.new(0, 300, 0, 40),
+	Position = UDim2.new(0.5, -150, 0.5, -20),
+	BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+	TextColor3 = ColorWhite,
+	Font = Enum.Font.Gotham,
+	TextSize = 16,
+	PlaceholderText = "Enter Key Here...",
+	Text = "",
+	ZIndex = 51,
+	Parent = KeyFrame
+})
+applyStroke(KeyInput)
+create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = KeyInput })
+
+local KeyButton = create("TextButton", {
+	Size = UDim2.new(0, 150, 0, 40),
+	Position = UDim2.new(0.5, -75, 0.5, 40),
+	BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+	TextColor3 = ColorWhite,
+	Font = Enum.Font.GothamBold,
+	TextSize = 16,
+	Text = "APPLY",
+	ZIndex = 51,
+	Parent = KeyFrame
+})
+applyStroke(KeyButton)
+create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = KeyButton })
+
+-- ==========================================
+-- 3. ANA MENÜ (MAIN HUB)
+-- ==========================================
+local MainSize = UDim2.new(0, 700, 0, 450)
+local MainFrame = create("Frame", {
+	Size = MainSize,
+	Position = UDim2.new(0.5, -350, -0.6, -225),
+	Active = true,
+	Draggable = true,
+	Parent = GigaChadHub,
+	ClipsDescendants = true,
+	ZIndex = 10
+})
+applyWaveGradient(MainFrame)
+applyStroke(MainFrame)
+create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = MainFrame })
+
+local TopBar = create("Frame", {
+	Size = UDim2.new(1, 0, 0, 40),
+	BackgroundTransparency = 1,
+	ZIndex = 11,
+	Parent = MainFrame
+})
+
+-- SOL ÜSTTE HER ZAMAN GÖRÜNEN LOGO
+local TopLogo = create("ImageLabel", {
+	Size = UDim2.new(0, 26, 0, 26),
+	Position = UDim2.new(0, 10, 0, 7),
+	BackgroundTransparency = 1,
+	Image = "rbxassetid://7534312534", 
+	ZIndex = 12,
+	Parent = TopBar
+})
+
+local TypewriterText = create("TextLabel", {
+	Size = UDim2.new(0, 300, 1, 0),
+	Position = UDim2.new(0, 45, 0, 0), -- LOGONUN SAĞINA KAYDIRILDI
+	BackgroundTransparency = 1,
+	Text = "",
+	TextColor3 = ColorGreen,
+	Font = Enum.Font.GothamBold,
+	TextSize = 16,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 12,
+	Parent = TopBar
+})
+
+local CloseBtn = create("TextButton", {
+	Size = UDim2.new(0, 30, 0, 30),
+	Position = UDim2.new(1, -35, 0, 5),
+	BackgroundColor3 = Color3.fromRGB(200, 50, 50),
+	Text = "X",
+	TextColor3 = ColorWhite,
+	Font = Enum.Font.GothamBold,
+	ZIndex = 12,
+	Parent = TopBar
+})
+create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = CloseBtn })
+
+local MinimizeBtn = create("TextButton", {
+	Size = UDim2.new(0, 30, 0, 30),
+	Position = UDim2.new(1, -70, 0, 5),
+	BackgroundColor3 = ColorLightGrey,
+	Text = "-",
+	TextColor3 = ColorWhite,
+	Font = Enum.Font.GothamBold,
+	ZIndex = 12,
+	Parent = TopBar
+})
+create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = MinimizeBtn })
+
+local Sidebar = create("Frame", {
+	Size = UDim2.new(0, 150, 1, -40),
+	Position = UDim2.new(0, 0, 0, 40),
+	BackgroundColor3 = Color3.fromRGB(15, 15, 15),
+	BackgroundTransparency = 0.3,
+	ZIndex = 11,
+	Parent = MainFrame
+})
+applyStroke(Sidebar)
+
+local TabListLayout = create("UIListLayout", {
+	Parent = Sidebar,
+	SortOrder = Enum.SortOrder.LayoutOrder,
+	Padding = UDim.new(0, 10),
+	HorizontalAlignment = Enum.HorizontalAlignment.Center
+})
+create("UIPadding", { PaddingTop = UDim.new(0, 15), Parent = Sidebar })
+
+local ContentArea = create("Frame", {
+	Size = UDim2.new(1, -160, 1, -50),
+	Position = UDim2.new(0, 155, 0, 45),
+	BackgroundTransparency = 1,
+	ClipsDescendants = true,
+	ZIndex = 11,
+	Parent = MainFrame
+})
+
+-- ==========================================
+-- SAYFALAR (PAGES)
+-- ==========================================
+local Pages = {}
+local TabButtons = {}
+
+local function createPage(name)
+	local page = create("Frame", {
+		Size = UDim2.new(1, 0, 1, 0),
+		Position = UDim2.new(1, 0, 0, 0),
+		BackgroundTransparency = 1,
+		ZIndex = 12,
+		Parent = ContentArea
+	})
+	
+	local btn = create("TextButton", {
+		Size = UDim2.new(0, 130, 0, 35),
+		BackgroundColor3 = ColorDarkGrey,
+		Text = name,
+		TextColor3 = ColorWhite,
+		Font = Enum.Font.GothamBold,
+		TextSize = 14,
+		ZIndex = 12,
+		Parent = Sidebar
+	})
+	applyStroke(btn)
+	create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = btn })
+	
+	Pages[name] = page
+	TabButtons[name] = btn
+	return page
+end
+
+local HomePage = createPage("Home")
+HomePage.Position = UDim2.new(0, 0, 0, 0)
+local CardLayout = create("UIGridLayout", {
+	CellSize = UDim2.new(0, 160, 0, 80),
+	CellPadding = UDim2.new(0, 15, 0, 15),
+	Parent = HomePage
+})
+
+local function createCard(title, initialValue, parent)
+	local card = create("Frame", { BackgroundColor3 = Color3.fromRGB(25, 25, 25), ZIndex = 13, Parent = parent })
+	applyStroke(card)
+	create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = card })
+	
+	create("TextLabel", {
+		Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, Text = title,
+		TextColor3 = ColorLightGrey, Font = Enum.Font.GothamBold, TextSize = 14, ZIndex = 14, Parent = card
+	})
+	local valLabel = create("TextLabel", {
+		Size = UDim2.new(1, 0, 1, -30), Position = UDim2.new(0, 0, 0, 30), BackgroundTransparency = 1,
+		Text = initialValue, TextColor3 = ColorWhite, Font = Enum.Font.GothamBold, TextSize = 18, ZIndex = 14, Parent = card
+	})
+	return valLabel
+end
+
+local FpsLabel = createCard("FPS", "60", HomePage)
+local PingLabel = createCard("PING", "0 ms", HomePage)
+local LocLabel = createCard("SERVER", "Loading...", HomePage)
+
+local ExecPage = createPage("Executor")
+local CodeBox = create("TextBox", {
+	Size = UDim2.new(1, 0, 1, -50),
+	BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+	TextColor3 = ColorWhite,
+	Font = Enum.Font.Code,
+	TextSize = 14,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextYAlignment = Enum.TextYAlignment.Top,
+	ClearTextOnFocus = false,
+	MultiLine = true,
+	Text = "-- GigaChad Local Exec\nprint('Hello World!')",
+	ZIndex = 13,
+	Parent = ExecPage
+})
+applyStroke(CodeBox)
+create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = CodeBox })
+
+local ExecBtn = create("TextButton", {
+	Size = UDim2.new(0, 120, 0, 35), Position = UDim2.new(0, 0, 1, -40),
+	BackgroundColor3 = Color3.fromRGB(40, 100, 40), Text = "Execute", TextColor3 = ColorWhite,
+	Font = Enum.Font.GothamBold, ZIndex = 13, Parent = ExecPage
+})
+applyStroke(ExecBtn)
+create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = ExecBtn })
+
+local ClearBtn = create("TextButton", {
+	Size = UDim2.new(0, 120, 0, 35), Position = UDim2.new(0, 130, 1, -40),
+	BackgroundColor3 = Color3.fromRGB(100, 40, 40), Text = "Clear", TextColor3 = ColorWhite,
+	Font = Enum.Font.GothamBold, ZIndex = 13, Parent = ExecPage
+})
+applyStroke(ClearBtn)
+create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = ClearBtn })
+
+local ScriptsPage = createPage("Scripts")
+create("TextLabel", {
+	Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "İleride yapılacak Guts vb. karakter scriptleri buraya gelecek.",
+	TextColor3 = ColorWhite, Font = Enum.Font.Gotham, TextSize = 16, TextWrapped = true, ZIndex = 13, Parent = ScriptsPage
+})
+
+-- ==========================================
+-- SİSTEM MANTIKLARI VE ANİMASYONLAR
+-- ==========================================
+
+local currentPage = "Home"
+for name, btn in pairs(TabButtons) do
+	btn.MouseButton1Click:Connect(function()
+		if currentPage == name then return end
+		Pages[currentPage]:TweenPosition(UDim2.new(-1, 0, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.4, true)
+		Pages[name].Position = UDim2.new(1, 0, 0, 0)
+		Pages[name]:TweenPosition(UDim2.new(0, 0, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.4, true)
+		currentPage = name
+	end)
+end
+
+local ResizeHandle = create("TextButton", {
+	Size = UDim2.new(0, 15, 0, 15), Position = UDim2.new(1, -15, 1, -15),
+	BackgroundTransparency = 1, Text = "◢", TextColor3 = ColorLightGrey, TextSize = 14, ZIndex = 15, Parent = MainFrame
+})
+
+local isResizing = false
+local resizeStartSize, resizeStartPos
+ResizeHandle.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		isResizing = true
+		resizeStartPos = input.Position
+		resizeStartSize = MainFrame.Size
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if isResizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - resizeStartPos
+		local newX = math.clamp(resizeStartSize.X.Offset + delta.X, 500, 1000)
+		local newY = math.clamp(resizeStartSize.Y.Offset + delta.Y, 300, 700)
+		MainFrame.Size = UDim2.new(0, newX, 0, newY)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		isResizing = false
+	end
+end)
+
+-- Minimize Sistemi (Logo artık gizlenmiyor, sadece yazı gizleniyor)
+local isMinimized = false
+local lastSize = MainSize
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+	isMinimized = not isMinimized
+	if isMinimized then
+		lastSize = MainFrame.Size
+		ContentArea.Visible = false
+		Sidebar.Visible = false
+		TypewriterText.Visible = false
+		-- TopLogo artık kalıcı!
+		MainFrame:TweenSize(UDim2.new(0, 350, 0, 40), Enum.EasingDirection.Out, Enum.EasingStyle.Quint, 0.3, true)
+	else
+		MainFrame:TweenSize(lastSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quint, 0.3, true)
+		TypewriterText.Visible = true
+		task.wait(0.3)
+		ContentArea.Visible = true
+		Sidebar.Visible = true
+	end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+	MainFrame:TweenPosition(UDim2.new(0.5, -MainFrame.Size.X.Offset/2, 1.5, 0), Enum.EasingDirection.In, Enum.EasingStyle.Back, 0.5, true)
+	task.wait(0.5)
+	GigaChadHub:Destroy()
+end)
+
+local isMenuOpen = true
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if not gameProcessed and input.KeyCode == Enum.KeyCode.X and MainFrame.Parent then
+		isMenuOpen = not isMenuOpen
+		MainFrame.Visible = isMenuOpen
+	end
+end)
+
+-- FPS ve DÖNEN LOGO SİSTEMİ BURADA
+RunService.RenderStepped:Connect(function(deltaTime)
+	FpsLabel.Text = math.floor(1 / deltaTime)
+	
+	-- Yükleme ekranı aktifken logoyu kendi etrafında pürüzsüz döndür
+	if LoadingFrame.Visible then
+		LogoBig.Rotation = LogoBig.Rotation + (deltaTime * 200) -- Hızı 200 olarak ayarlandı
+	end
+end)
+
+task.spawn(function()
+	while task.wait(1) do
+		pcall(function()
+			PingLabel.Text = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) .. " ms"
+		end)
+	end
+end)
+
+pcall(function() LocLabel.Text = game:GetService("LocalizationService").SystemLocaleId end)
+
+ExecBtn.MouseButton1Click:Connect(function()
+	print("[GigaChad Hub]: Kod çalıştırıldı ->\n" .. CodeBox.Text)
+end)
+
+ClearBtn.MouseButton1Click:Connect(function()
+	CodeBox.Text = ""
+end)
+
+-- BAŞLANGIÇ ANİMASYONLARI
+task.spawn(function()
+	pcall(function()
+		ContentProvider:PreloadAsync({LogoBig, TopLogo})
+	end)
+	
+	task.wait(2.5) 
+	
+	TweenService:Create(LogoBig, TweenInfo.new(1), {ImageTransparency = 1}):Play()
+	TweenService:Create(LoadingText, TweenInfo.new(1), {TextTransparency = 1}):Play()
+	TweenService:Create(LoadingFrame, TweenInfo.new(1), {BackgroundTransparency = 1}):Play()
+	
+	task.wait(1)
+	LoadingFrame.Visible = false
+	
+	KeyFrame:TweenPosition(UDim2.new(0.5, -200, 0.5, -125), Enum.EasingDirection.Out, Enum.EasingStyle.Bounce, 1, true)
+end)
+
+KeyButton.MouseButton1Click:Connect(function()
+	if KeyInput.Text == "GigaChad" then
+		KeyButton.Text = "SUCCESS!"
+		KeyButton.BackgroundColor3 = ColorGreen
+		task.wait(1)
+		
+		KeyFrame:TweenPosition(UDim2.new(0.5, -200, -0.5, -125), Enum.EasingDirection.In, Enum.EasingStyle.Back, 0.7, true)
+		task.wait(0.7)
+		KeyFrame.Visible = false
+		
+		MainFrame.Position = UDim2.new(0.5, -MainFrame.Size.X.Offset/2, -0.6, 0)
+		MainFrame:TweenPosition(UDim2.new(0.5, -MainFrame.Size.X.Offset/2, 0.5, -MainFrame.Size.Y.Offset/2), Enum.EasingDirection.Out, Enum.EasingStyle.Bounce, 1, true)
+		
+		task.wait(1)
+		local textMsg = "Safe, fast, undetected"
+		for i = 1, #textMsg do
+			TypewriterText.Text = string.sub(textMsg, 1, i)
+			task.wait(0.05)
+		end
+	else
+		KeyButton.Text = "WRONG KEY"
+		KeyButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+		task.wait(1)
+		KeyButton.Text = "APPLY"
+		KeyButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	end
+end)
