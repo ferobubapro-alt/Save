@@ -100,7 +100,7 @@ local isDebuffed = false
 local wasBerserker = false
 
 local inDarkSky = false
-local cursedSpirits = {} -- Ruhları ve özelliklerini tutar
+local cursedSpirits = {}
 
 --============================================================
 -- TITLES (UNVANLAR)
@@ -111,7 +111,6 @@ local function applyTitle()
 	local head = character:WaitForChild("Head", 5)
 	
 	if head then
-		-- Eğer varsa eski etiketi sil veya güncelle
 		local oldTag = head:FindFirstChild("PlayerTitle")
 		if oldTag then oldTag:Destroy() end
 		
@@ -122,7 +121,6 @@ local function applyTitle()
 
 		local bb = Instance.new("BillboardGui")
 		bb.Name = "PlayerTitle"
-		-- Size Offset kullanarak kamera zoomunda boyutun aynı kalmasını sağladık
 		bb.Size = UDim2.new(0, 200, 0, 40) 
 		bb.StudsOffset = Vector3.new(0, 3.5, 0)
 		bb.AlwaysOnTop = true
@@ -172,45 +170,64 @@ local function applyBerserkerDebuff()
 end
 
 --============================================================
--- KARANLIK GÖKYÜZÜ (5 SANİYELİK ATMOSFER)
+-- KARANLIK GÖKYÜZÜ (5 SANİYELİK ATMOSFER - DÜZELTİLMİŞ)
 --============================================================
 
 local function triggerDarkSky()
 	if inDarkSky then return end
 	inDarkSky = true
-	
+
+	local oldSky = Lighting:FindFirstChildOfClass("Sky")
+	if oldSky then
+		oldSky.Parent = nil
+	end
+
 	local oldAmbient = Lighting.Ambient
 	local oldOutdoor = Lighting.OutdoorAmbient
 	local oldBrightness = Lighting.Brightness
-	
-	-- Geçici Skybox Ekle
+
 	local sky = Instance.new("Sky")
 	sky.Name = "TempDarkSky"
+
 	sky.SkyboxBk = ECLIPSE_SKYBOX
 	sky.SkyboxDn = ECLIPSE_SKYBOX
 	sky.SkyboxFt = ECLIPSE_SKYBOX
 	sky.SkyboxLf = ECLIPSE_SKYBOX
 	sky.SkyboxRt = ECLIPSE_SKYBOX
 	sky.SkyboxUp = ECLIPSE_SKYBOX
+
 	sky.Parent = Lighting
-	
-	-- Atmosferi Karart
-	TweenService:Create(Lighting, TweenInfo.new(1), {
-		Ambient = Color3.fromRGB(5, 0, 0),
-		OutdoorAmbient = Color3.fromRGB(5, 0, 0),
-		Brightness = 0.2
-	}):Play()
-	
-	-- 5 Saniye sonra eski haline döndür
+
+	TweenService:Create(
+		Lighting,
+		TweenInfo.new(1),
+		{
+			Ambient = Color3.fromRGB(5, 0, 0),
+			OutdoorAmbient = Color3.fromRGB(5, 0, 0),
+			Brightness = 0.2
+		}
+	):Play()
+
 	task.delay(5, function()
-		TweenService:Create(Lighting, TweenInfo.new(2), {
-			Ambient = oldAmbient,
-			OutdoorAmbient = oldOutdoor,
-			Brightness = oldBrightness
-		}):Play()
-		
+		if sky and sky.Parent then
+			sky:Destroy()
+		end
+
+		if oldSky then
+			oldSky.Parent = Lighting
+		end
+
+		TweenService:Create(
+			Lighting,
+			TweenInfo.new(2),
+			{
+				Ambient = oldAmbient,
+				OutdoorAmbient = oldOutdoor,
+				Brightness = oldBrightness
+			}
+		):Play()
+
 		task.delay(2, function()
-			if sky then sky:Destroy() end
 			inDarkSky = false
 		end)
 	end)
@@ -237,7 +254,6 @@ local function spawnCursedSpirit()
 	spirit.Position = root.Position + offset
 	spirit.Parent = workspace
 	
-	-- Rastgele davranış seç: 1 = Gözlemci (Watcher), 2 = Saldırgan (Aggressive)
 	local isAggressive = math.random(1, 2) == 2
 	local speed = isAggressive and (math.random(40, 80) / 100) or 0
 	
@@ -248,7 +264,6 @@ local function spawnCursedSpirit()
 	}
 	table.insert(cursedSpirits, spiritData)
 	
-	-- Ruh 5 saniye sonra veya dokunulduğunda kaybolsun
 	task.delay(5, function()
 		if spirit and spirit.Parent then
 			local tween = TweenService:Create(spirit, TweenInfo.new(0.5), {Transparency = 1})
@@ -278,12 +293,10 @@ local function startBackgroundEvents()
 		while currentStyle == "Guts" or currentStyle == "Berserker" do
 			task.wait(1)
 			
-			-- Her 1 saniyede %1 (1/100) şansla Skybox Değişir
 			if not inDarkSky and math.random(1, 100) == 1 then
 				triggerDarkSky()
 			end
 			
-			-- Ruhlar ve Fısıltılar (her 10 saniyede %10 şansla)
 			spiritTimer += 1
 			if spiritTimer >= 10 then
 				spiritTimer = 0
