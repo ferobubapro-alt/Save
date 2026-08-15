@@ -1,5 +1,5 @@
 --============================================================
--- BERSERK COMBAT & ANIMATION HUB (ECLIPSE EDITION)
+-- BERSERK COMBAT & ANIMATION HUB (DARK ATMOSPHERE EDITION)
 --============================================================
 
 local Players = game:GetService("Players")
@@ -99,34 +99,41 @@ local backgroundLoops = nil
 local isDebuffed = false
 local wasBerserker = false
 
--- Eclipse Variables
-local inEclipse = false
-local preEclipseCFrame = nil
-local eclipseMap = nil
-local eclipseMonsters = {}
-local cursedSpirits = {}
+local inDarkSky = false
+local cursedSpirits = {} -- Ruhları ve özelliklerini tutar
 
 --============================================================
--- BRAND OF SACRIFICE (DAMGA)
+-- TITLES (UNVANLAR)
 --============================================================
 
-local function applyBrandTag()
+local function applyTitle()
 	if not character then return end
 	local head = character:WaitForChild("Head", 5)
-	if head and not head:FindFirstChild("BrandTag") then
+	
+	if head then
+		-- Eğer varsa eski etiketi sil veya güncelle
+		local oldTag = head:FindFirstChild("PlayerTitle")
+		if oldTag then oldTag:Destroy() end
+		
+		local titleText = ""
+		if currentStyle == "Berserker" then titleText = "THE BERSERKER"
+		elseif currentStyle == "Guts" then titleText = "BLACK SWORDSMAN"
+		else return end
+
 		local bb = Instance.new("BillboardGui")
-		bb.Name = "BrandTag"
-		bb.Size = UDim2.new(0, 100, 0, 100)
-		bb.StudsOffset = Vector3.new(0, 2.5, 0)
+		bb.Name = "PlayerTitle"
+		-- Size Offset kullanarak kamera zoomunda boyutun aynı kalmasını sağladık
+		bb.Size = UDim2.new(0, 200, 0, 40) 
+		bb.StudsOffset = Vector3.new(0, 3.5, 0)
 		bb.AlwaysOnTop = true
 		
 		local txt = Instance.new("TextLabel")
 		txt.Size = UDim2.new(1, 0, 1, 0)
 		txt.BackgroundTransparency = 1
-		txt.Text = "𒉭"
-		txt.TextColor3 = Color3.fromRGB(220, 0, 0)
-		txt.TextScaled = true
+		txt.Text = titleText
+		txt.TextColor3 = Color3.fromRGB(180, 0, 0)
 		txt.Font = Enum.Font.Oswald
+		txt.TextScaled = true
 		txt.Parent = bb
 		
 		bb.Parent = head
@@ -152,7 +159,6 @@ local function applyBerserkerDebuff()
 	
 	TweenService:Create(camera, TweenInfo.new(2), {FieldOfView = 50}):Play()
 	
-	-- 15 Saniye sonra iyileşme
 	task.delay(15, function()
 		if cc and cc.Parent then
 			local t = TweenService:Create(cc, TweenInfo.new(3), {Saturation = 0, Contrast = 0})
@@ -166,42 +172,20 @@ local function applyBerserkerDebuff()
 end
 
 --============================================================
--- ECLIPSE (TUTULMA) SİSTEMİ
+-- KARANLIK GÖKYÜZÜ (5 SANİYELİK ATMOSFER)
 --============================================================
 
-local function endEclipse()
-	inEclipse = false
-	if eclipseMap then eclipseMap:Destroy(); eclipseMap = nil end
-	local sky = Lighting:FindFirstChild("EclipseSky")
-	if sky then sky:Destroy() end
+local function triggerDarkSky()
+	if inDarkSky then return end
+	inDarkSky = true
 	
-	for _, m in ipairs(eclipseMonsters) do if m then m:Destroy() end end
-	eclipseMonsters = {}
+	local oldAmbient = Lighting.Ambient
+	local oldOutdoor = Lighting.OutdoorAmbient
+	local oldBrightness = Lighting.Brightness
 	
-	if character and character:FindFirstChild("HumanoidRootPart") and preEclipseCFrame then
-		character.HumanoidRootPart.CFrame = preEclipseCFrame
-	end
-end
-
-local function triggerEclipse()
-	if inEclipse or not character or not character:FindFirstChild("HumanoidRootPart") then return end
-	inEclipse = true
-	
-	local root = character.HumanoidRootPart
-	preEclipseCFrame = root.CFrame
-	
-	-- Eclipse Map Oluştur (Çok yüksekte)
-	eclipseMap = Instance.new("Part")
-	eclipseMap.Size = Vector3.new(1000, 20, 1000)
-	eclipseMap.Position = Vector3.new(0, 50000, 0)
-	eclipseMap.Anchored = true
-	eclipseMap.Color = Color3.fromRGB(15, 0, 0)
-	eclipseMap.Material = Enum.Material.Basalt
-	eclipseMap.Parent = workspace
-	
-	-- Skybox
+	-- Geçici Skybox Ekle
 	local sky = Instance.new("Sky")
-	sky.Name = "EclipseSky"
+	sky.Name = "TempDarkSky"
 	sky.SkyboxBk = ECLIPSE_SKYBOX
 	sky.SkyboxDn = ECLIPSE_SKYBOX
 	sky.SkyboxFt = ECLIPSE_SKYBOX
@@ -210,34 +194,25 @@ local function triggerEclipse()
 	sky.SkyboxUp = ECLIPSE_SKYBOX
 	sky.Parent = Lighting
 	
-	-- Işınla
-	task.wait(0.1)
-	root.CFrame = CFrame.new(0, 50015, 0)
+	-- Atmosferi Karart
+	TweenService:Create(Lighting, TweenInfo.new(1), {
+		Ambient = Color3.fromRGB(5, 0, 0),
+		OutdoorAmbient = Color3.fromRGB(5, 0, 0),
+		Brightness = 0.2
+	}):Play()
 	
-	-- Yaratık Spawn Döngüsü
-	task.spawn(function()
-		local endTime = tick() + 60 -- Maks 60 saniye
-		while inEclipse and tick() < endTime do
-			if character and character:FindFirstChild("HumanoidRootPart") then
-				local pPos = character.HumanoidRootPart.Position
-				local dist = math.random(50, 200)
-				local angle = math.random() * math.pi * 2
-				local spawnPos = pPos + Vector3.new(math.cos(angle) * dist, 0, math.sin(angle) * dist)
-				
-				-- Sadece sende gözükecek dummy yaratık
-				local monster = Instance.new("Part")
-				monster.Size = Vector3.new(3, 6, 3)
-				monster.Color = Color3.fromRGB(5, 5, 5)
-				monster.Material = Enum.Material.Neon
-				monster.Position = Vector3.new(spawnPos.X, 50015, spawnPos.Z)
-				monster.Anchored = true
-				monster.CanCollide = false
-				monster.Parent = workspace
-				table.insert(eclipseMonsters, monster)
-			end
-			task.wait(2)
-		end
-		endEclipse()
+	-- 5 Saniye sonra eski haline döndür
+	task.delay(5, function()
+		TweenService:Create(Lighting, TweenInfo.new(2), {
+			Ambient = oldAmbient,
+			OutdoorAmbient = oldOutdoor,
+			Brightness = oldBrightness
+		}):Play()
+		
+		task.delay(2, function()
+			if sky then sky:Destroy() end
+			inDarkSky = false
+		end)
 	end)
 end
 
@@ -251,21 +226,35 @@ local function spawnCursedSpirit()
 	
 	local spirit = Instance.new("Part")
 	spirit.Size = Vector3.new(2, 4, 2)
-	spirit.Color = Color3.fromRGB(20, 0, 30)
-	spirit.Material = Enum.Material.ForceField
-	spirit.Transparency = 0.2
+	spirit.Color = Color3.fromRGB(15, 0, 25)
+	spirit.Material = Enum.Material.Neon
+	spirit.Transparency = 0.4
 	spirit.Anchored = true
 	spirit.CanCollide = false
 	
 	local angle = math.random() * math.pi * 2
-	local offset = Vector3.new(math.cos(angle) * 30, math.random(-5, 10), math.sin(angle) * 30)
+	local offset = Vector3.new(math.cos(angle) * math.random(25, 40), -1, math.sin(angle) * math.random(25, 40))
 	spirit.Position = root.Position + offset
 	spirit.Parent = workspace
 	
-	table.insert(cursedSpirits, spirit)
+	-- Rastgele davranış seç: 1 = Gözlemci (Watcher), 2 = Saldırgan (Aggressive)
+	local isAggressive = math.random(1, 2) == 2
+	local speed = isAggressive and (math.random(40, 80) / 100) or 0
 	
-	task.delay(4, function()
-		if spirit then spirit:Destroy() end
+	local spiritData = {
+		Part = spirit,
+		IsAggressive = isAggressive,
+		Speed = speed
+	}
+	table.insert(cursedSpirits, spiritData)
+	
+	-- Ruh 5 saniye sonra veya dokunulduğunda kaybolsun
+	task.delay(5, function()
+		if spirit and spirit.Parent then
+			local tween = TweenService:Create(spirit, TweenInfo.new(0.5), {Transparency = 1})
+			tween:Play()
+			tween.Completed:Connect(function() spirit:Destroy() end)
+		end
 	end)
 end
 
@@ -289,12 +278,12 @@ local function startBackgroundEvents()
 		while currentStyle == "Guts" or currentStyle == "Berserker" do
 			task.wait(1)
 			
-			-- Eclipse İhtimali (%10 her saniye)
-			if not inEclipse and math.random(1, 10) == 1 then
-				triggerEclipse()
+			-- Her 1 saniyede %1 (1/100) şansla Skybox Değişir
+			if not inDarkSky and math.random(1, 100) == 1 then
+				triggerDarkSky()
 			end
 			
-			-- Ruhlar ve Fısıltılar (%10 her 10 saniye)
+			-- Ruhlar ve Fısıltılar (her 10 saniyede %10 şansla)
 			spiritTimer += 1
 			if spiritTimer >= 10 then
 				spiritTimer = 0
@@ -634,7 +623,6 @@ local function createSelectionGUI()
 			gui:Destroy()
 			gui = nil
 			
-			-- Zırhı çıkarma/değiştirme debuff'ı
 			if wasBerserker and style ~= "Berserker" then applyBerserkerDebuff() end
 			
 			currentStyle = style
@@ -653,7 +641,7 @@ local function createSelectionGUI()
 				if humanoid and not isDebuffed then humanoid.WalkSpeed = DEFAULT_SPEED end
 			end
 			
-			applyBrandTag()
+			applyTitle()
 			startBackgroundEvents()
 			
 			task.wait(0.1)
@@ -678,20 +666,32 @@ local function update()
 	
 	stopDefaultAnimations()
 
-	-- Eclipse Yaratıklarını & Ruhları sana doğru hareket ettir
+	-- Ruhların Yönlendirilmesi ve Çarpışma Kontrolü
 	if character and character:FindFirstChild("HumanoidRootPart") then
 		local pPos = character.HumanoidRootPart.Position
-		for _, m in ipairs(eclipseMonsters) do
-			if m and m.Parent then
-				local dir = (pPos - m.Position).Unit
-				m.CFrame = m.CFrame + (dir * 0.4) -- Yaratık hızı
-				m.CFrame = CFrame.new(m.Position, Vector3.new(pPos.X, m.Position.Y, pPos.Z))
-			end
-		end
-		for _, s in ipairs(cursedSpirits) do
+		for i = #cursedSpirits, 1, -1 do
+			local sData = cursedSpirits[i]
+			local s = sData.Part
+			
 			if s and s.Parent then
-				local dir = (pPos - s.Position).Unit
-				s.CFrame = s.CFrame + (dir * 0.2)
+				local dist = (pPos - s.Position).Magnitude
+				
+				if dist < 3 then
+					-- Oyuncuya Dokunduysa Sil
+					s:Destroy()
+					table.remove(cursedSpirits, i)
+				else
+					-- Saldırgan veya Gözlemci Hareketleri
+					if sData.IsAggressive then
+						local dir = (pPos - s.Position).Unit
+						s.CFrame = s.CFrame + (dir * sData.Speed)
+					else
+						-- Sadece bakarak hafif süzülür
+						s.CFrame = CFrame.new(s.Position, Vector3.new(pPos.X, s.Position.Y, pPos.Z))
+					end
+				end
+			else
+				table.remove(cursedSpirits, i)
 			end
 		end
 	end
@@ -736,7 +736,6 @@ local function loadCharacter(char)
 	
 	humanoid.Died:Connect(function()
 		if wasBerserker then applyBerserkerDebuff() end
-		endEclipse()
 	end)
 	
 	humanoid:GetPropertyChangedSignal("Health"):Connect(function()
@@ -745,8 +744,7 @@ local function loadCharacter(char)
 	
 	createSelectionGUI()
 	
-	-- Doğar doğmaz damgayı vur!
-	if currentStyle then applyBrandTag() end
+	if currentStyle then applyTitle() end
 end
 
 if player.Character then loadCharacter(player.Character) end
