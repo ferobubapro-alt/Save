@@ -1,0 +1,445 @@
+--============================================================
+-- BERSERK COMBAT & ANIMATION HUB
+--============================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+--============================================================
+-- ID'LER & CONFIG
+--============================================================
+
+local VIGNETTE_ID = "rbxassetid://103209433132705"
+local RUN_ANIM = "rbxassetid://87380318549717"
+local GUTS_INJURED_IDLE = "rbxassetid://102062435685174"
+
+local IDLE_ANIMS = {
+	Berserker = {{Id = "rbxassetid://139995488323628", Weight = 1}},
+	Guts = {
+		{Id = "rbxassetid://137746879738843", Weight = 9},
+		{Id = "rbxassetid://129528999809209", Weight = 1}
+	},
+	Griffith = {{Id = "rbxassetid://99816605173868", Weight = 1}}
+}
+
+local STANCES = {
+	Guts = {
+		{Name = "Stance 1", Id = "rbxassetid://87330646928482"},
+		{Name = "Stance 2", Id = "rbxassetid://108313166344264"},
+		{Name = "Stance 3", Id = "rbxassetid://122770553953898"},
+		{Name = "Stance 4", Id = "rbxassetid://108706945249305"}
+	},
+	Berserker = {
+		{Name = "Stance 1", Id = "rbxassetid://137436487987645"},
+		{Name = "Stance 2", Id = "rbxassetid://127310392927940"}
+	}
+}
+
+local VOICES = {
+	Guts = {
+		{Name = "SCREAM", Id = "114682441546911"},
+		{Name = "GRIFFITH!", Id = "135503245297570"}
+	},
+	Berserker = {
+		{Name = "SCREAM", Id = "114682441546911"},
+		{Name = "GRIFFITH!", Id = "135503245297570"},
+		{Name = "BERSERKER", Id = "131847455413624"}
+	}
+}
+
+local RUN_ENABLED = { Berserker = true, Guts = true, Griffith = false }
+
+-- THEME COLORS
+local COLOR_BG = Color3.fromRGB(15, 0, 0) -- Karanlık Kırmızı/Siyah
+local COLOR_BORDER = Color3.fromRGB(120, 0, 0) -- Kan Kırmızısı
+local COLOR_TEXT = Color3.fromRGB(220, 220, 220)
+local COLOR_SELECTED = Color3.fromRGB(200, 0, 0)
+local FONT_THEME = Enum.Font.Oswald
+
+--============================================================
+-- VARIABLES
+--============================================================
+
+local character, humanoid, animator
+local currentStyle = nil
+local currentStanceId = nil
+local currentVoice = nil
+
+local idleTrack, runTrack, idleConnection
+local gui, vfxGui, combatGui
+
+--============================================================
+-- EFEKT VE TEMİZLİK
+--============================================================
+
+local function clearVisuals()
+	if idleConnection then idleConnection:Disconnect(); idleConnection = nil end
+	if idleTrack then pcall(function() idleTrack:Stop(); idleTrack:Destroy() end); idleTrack = nil end
+	if runTrack then pcall(function() runTrack:Stop(); runTrack:Destroy() end); runTrack = nil end
+	
+	if gui then gui:Destroy(); gui = nil end
+	if vfxGui then vfxGui:Destroy(); vfxGui = nil end
+	if combatGui then combatGui:Destroy(); combatGui = nil end
+end
+
+local function applyBerserkerEffects()
+	vfxGui = Instance.new("ScreenGui")
+	vfxGui.Name = "BerserkerVFX"
+	vfxGui.IgnoreGuiInset = true
+	vfxGui.Parent = playerGui
+
+	local tint = Instance.new("Frame")
+	tint.Size = UDim2.new(1, 0, 1, 0)
+	tint.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+	tint.BackgroundTransparency = 0.85
+	tint.BorderSizePixel = 0
+	tint.Parent = vfxGui
+
+	local vignette = Instance.new("ImageLabel")
+	vignette.Size = UDim2.new(1, 0, 1, 0)
+	vignette.BackgroundTransparency = 1
+	vignette.Image = VIGNETTE_ID
+	vignette.ImageTransparency = 0.15
+	vignette.ScaleType = Enum.ScaleType.Stretch
+	vignette.Parent = vfxGui
+end
+
+--============================================================
+-- SES & ANİMASYON FONKSİYONLARI
+--============================================================
+
+local function playVoice(id)
+	if not character or not character:FindFirstChild("Head") then return end
+	if currentVoice then currentVoice:Destroy() end
+	
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxassetid://" .. id
+	sound.Volume = 2
+	sound.Parent = character.Head
+	sound:Play()
+	currentVoice = sound
+	
+	sound.Ended:Connect(function()
+		if sound == currentVoice then currentVoice = nil end
+		sound:Destroy()
+	end)
+end
+
+local function stopDefaultAnimations()
+	if not animator then return end
+	for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+		if track ~= idleTrack and track ~= runTrack then
+			local anim = track.Animation
+			if anim then
+				local name = string.lower(anim.Name or "")
+				if name:find("idle") or name:find("walk") or name:find("run") then
+					pcall(function() track:Stop(0.1) end)
+				end
+			end
+		end
+	end
+end
+
+local function isIdle()
+	if not humanoid or humanoid.Health <= 0 then return false end
+	local state = humanoid:GetState()
+	local moving = humanoid.MoveDirection.Magnitude > 0.05
+	if moving then return false end
+	if state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall then return false end
+	return true
+end
+
+local function playIdle()
+	if not animator or not currentStyle or not isIdle() then return end
+
+	if idleTrack then
+		pcall(function() idleTrack:Stop(0.1); idleTrack:Destroy() end)
+		idleTrack = nil
+	end
+
+	local animIdToPlay = nil
+
+	-- Öncelik 1: Stance Seçiliyse
+	if currentStanceId then
+		animIdToPlay = currentStanceId
+	-- Öncelik 2: Guts ve Can %30 altındaysa (Yaralı)
+	elseif currentStyle == "Guts" and humanoid.Health <= (humanoid.MaxHealth * 0.3) then
+		animIdToPlay = GUTS_INJURED_IDLE
+	-- Öncelik 3: Varsayılan Ağırlıklı Animasyonlar
+	else
+		local list = IDLE_ANIMS[currentStyle]
+		if list then
+			local totalWeight = 0
+			for _, data in ipairs(list) do totalWeight += data.Weight end
+			local rnd = math.random(1, totalWeight)
+			local counter = 0
+			for _, data in ipairs(list) do
+				counter += data.Weight
+				if rnd <= counter then animIdToPlay = data.Id; break end
+			end
+		end
+	end
+
+	if not animIdToPlay then return end
+
+	local animation = Instance.new("Animation")
+	animation.AnimationId = animIdToPlay
+	animation.Name = "CustomIdle"
+	
+	local success, track = pcall(function() return animator:LoadAnimation(animation) end)
+	animation:Destroy()
+	
+	if success and track then
+		idleTrack = track
+		idleTrack.Priority = Enum.AnimationPriority.Action4
+		idleTrack.Looped = not (currentStyle == "Guts" and not currentStanceId) -- Normal Guts idle loop false
+		
+		idleConnection = idleTrack.Ended:Connect(function()
+			if idleTrack == track and humanoid and humanoid.Health > 0 and isIdle() then
+				task.wait(0.08)
+				if isIdle() then playIdle() end
+			end
+		end)
+		track:Play(0.15, 1, 1)
+	end
+end
+
+local function createRun()
+	if not animator or not currentStyle or not RUN_ENABLED[currentStyle] then return end
+	if runTrack then pcall(function() runTrack:Stop(); runTrack:Destroy() end) end
+
+	local animation = Instance.new("Animation")
+	animation.AnimationId = RUN_ANIM
+	local success, track = pcall(function() return animator:LoadAnimation(animation) end)
+	animation:Destroy()
+	
+	if success and track then
+		runTrack = track
+		runTrack.Priority = Enum.AnimationPriority.Action3
+		runTrack.Looped = true
+	end
+end
+
+--============================================================
+-- GUI: COMBAT HUD (BLOODY/BLACK THEME)
+--============================================================
+
+local function createDropdown(parent, titleText, udimPos, anchor, sizeVec, items, type)
+	local container = Instance.new("Frame")
+	container.Size = sizeVec
+	container.Position = udimPos
+	container.AnchorPoint = anchor
+	container.BackgroundTransparency = 1
+	container.Parent = parent
+
+	local mainBtn = Instance.new("TextButton")
+	mainBtn.Size = UDim2.new(1, 0, 0, 40)
+	mainBtn.BackgroundColor3 = COLOR_BG
+	mainBtn.BorderColor3 = COLOR_BORDER
+	mainBtn.BorderSizePixel = 2
+	mainBtn.Font = FONT_THEME
+	mainBtn.Text = titleText
+	mainBtn.TextColor3 = Color3.fromRGB(255, 0, 0)
+	mainBtn.TextSize = 22
+	mainBtn.Parent = container
+
+	local listFrame = Instance.new("Frame")
+	listFrame.Size = UDim2.new(1, 0, 0, 0)
+	listFrame.Position = UDim2.new(0, 0, 0, 45)
+	listFrame.BackgroundColor3 = COLOR_BG
+	listFrame.BorderColor3 = COLOR_BORDER
+	listFrame.BorderSizePixel = 2
+	listFrame.ClipsDescendants = true
+	listFrame.Parent = container
+
+	local listLayout = Instance.new("UIListLayout")
+	listLayout.Padding = UDim.new(0, 2)
+	listLayout.Parent = listFrame
+
+	local isOpen = false
+	local stanceButtons = {}
+
+	mainBtn.MouseButton1Click:Connect(function()
+		isOpen = not isOpen
+		local targetSize = isOpen and UDim2.new(1, 0, 0, #items * 35) or UDim2.new(1, 0, 0, 0)
+		TweenService:Create(listFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = targetSize}):Play()
+	end)
+
+	for _, item in ipairs(items) do
+		local btn = Instance.new("TextButton")
+		btn.Size = UDim2.new(1, 0, 0, 33)
+		btn.BackgroundColor3 = Color3.fromRGB(20, 0, 0)
+		btn.BorderSizePixel = 0
+		btn.Font = FONT_THEME
+		btn.Text = item.Name
+		btn.TextColor3 = COLOR_TEXT
+		btn.TextSize = 18
+		btn.Parent = listFrame
+
+		if type == "Stance" then table.insert(stanceButtons, {btn = btn, id = item.Id}) end
+
+		btn.MouseButton1Click:Connect(function()
+			if type == "Voice" then
+				playVoice(item.Id)
+			elseif type == "Stance" then
+				if currentStanceId == item.Id then
+					currentStanceId = nil -- İptal et
+				else
+					currentStanceId = item.Id -- Seç
+				end
+				
+				-- Görsel Güncelleme (SEÇİLİ yazısı)
+				for _, d in ipairs(stanceButtons) do
+					if d.id == currentStanceId then
+						d.btn.Text = "SEÇİLİ"
+						d.btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+						d.btn.BackgroundColor3 = COLOR_SELECTED
+					else
+						d.btn.Text = item.Name -- Orijinal ismine döndür (gerçek kodda item referansı kayacağı için basit tutuyoruz)
+						-- İsmini bul
+						for _, st in ipairs(items) do if st.Id == d.id then d.btn.Text = st.Name end end
+						d.btn.TextColor3 = COLOR_TEXT
+						d.btn.BackgroundColor3 = Color3.fromRGB(20, 0, 0)
+					end
+				end
+				playIdle()
+			end
+		end)
+	end
+end
+
+local function loadCombatGUI()
+	if combatGui then combatGui:Destroy() end
+	combatGui = Instance.new("ScreenGui")
+	combatGui.Name = "BerserkCombatUI"
+	combatGui.ResetOnSpawn = false
+	combatGui.Parent = playerGui
+
+	-- ÜST: ATTACK (Şimdilik Boş)
+	createDropdown(combatGui, "ATTACK", UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0), UDim2.new(0, 200, 0, 40), {}, "Attack")
+
+	-- SOL: DRAGON SLAYER (Stances)
+	if STANCES[currentStyle] then
+		createDropdown(combatGui, "DRAGON SLAYER", UDim2.new(0, 10, 0.5, -100), Vector2.new(0, 0.5), UDim2.new(0, 180, 0, 40), STANCES[currentStyle], "Stance")
+	end
+
+	-- SAĞ: VOICE LINES
+	if VOICES[currentStyle] then
+		createDropdown(combatGui, "VOICE LINES", UDim2.new(1, -10, 0.5, -100), Vector2.new(1, 0.5), UDim2.new(0, 180, 0, 40), VOICES[currentStyle], "Voice")
+	end
+end
+
+--============================================================
+-- BAŞLANGIÇ GUI (KARAKTER SEÇİMİ)
+--============================================================
+
+local function createSelectionGUI()
+	clearVisuals()
+	
+	gui = Instance.new("ScreenGui")
+	gui.Name = "BerserkSelector"
+	gui.Parent = playerGui
+
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(0, 300, 0, 150)
+	frame.Position = UDim2.new(0.5, -150, 0.5, -75)
+	frame.BackgroundColor3 = COLOR_BG
+	frame.BorderColor3 = COLOR_BORDER
+	frame.BorderSizePixel = 3
+	frame.Parent = gui
+
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1, 0, 0, 40)
+	title.BackgroundTransparency = 1
+	title.Text = "CHOOSE YOUR PATH"
+	title.TextColor3 = Color3.fromRGB(255, 0, 0)
+	title.Font = FONT_THEME
+	title.TextSize = 24
+	title.Parent = frame
+
+	local function makeCharBtn(text, yPos, style)
+		local btn = Instance.new("TextButton")
+		btn.Size = UDim2.new(0.8, 0, 0, 35)
+		btn.Position = UDim2.new(0.1, 0, 0, yPos)
+		btn.BackgroundColor3 = Color3.fromRGB(30, 0, 0)
+		btn.BorderColor3 = COLOR_BORDER
+		btn.Font = FONT_THEME
+		btn.Text = text
+		btn.TextColor3 = COLOR_TEXT
+		btn.TextSize = 20
+		btn.Parent = frame
+
+		btn.MouseButton1Click:Connect(function()
+			gui:Destroy()
+			gui = nil
+			currentStyle = style
+			currentStanceId = nil
+			
+			if style == "Berserker" then applyBerserkerEffects() end
+			
+			task.wait(0.1)
+			if animator then
+				createRun()
+				if isIdle() then playIdle() end
+			end
+			loadCombatGUI()
+		end)
+	end
+
+	makeCharBtn("BERSERKER", 50, "Berserker")
+	makeCharBtn("GUTS", 95, "Guts")
+end
+
+--============================================================
+-- UPDATE / KARAKTER YÖNETİMİ
+--============================================================
+
+local function update()
+	if not humanoid or humanoid.Health <= 0 then return end
+	stopDefaultAnimations()
+
+	local moving = humanoid.MoveDirection.Magnitude > 0.05
+	local state = humanoid:GetState()
+	local airborne = state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall or state == Enum.HumanoidStateType.FallingDown
+
+	if not moving and not airborne then
+		if runTrack and runTrack.IsPlaying then runTrack:Stop(0.12) end
+		if not idleTrack or not idleTrack.IsPlaying then playIdle() end
+		return
+	end
+
+	if moving and not airborne then
+		if idleTrack and idleTrack.IsPlaying then idleTrack:Stop(0.12) end
+		if RUN_ENABLED[currentStyle] then
+			if not runTrack then createRun() end
+			if runTrack and not runTrack.IsPlaying then runTrack:Play(0.12, 1, 1) end
+		end
+		return
+	end
+
+	if airborne then
+		if idleTrack and idleTrack.IsPlaying then idleTrack:Stop(0.1) end
+		if runTrack and runTrack.IsPlaying then runTrack:Stop(0.1) end
+	end
+end
+
+local function loadCharacter(char)
+	character = char
+	humanoid = character:WaitForChild("Humanoid")
+	animator = humanoid:WaitForChild("Animator")
+	
+	-- Guts'un canı değiştiğinde yaralı (injured) animasyonunu tetiklemek için:
+	humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+		if isIdle() and not currentStanceId then playIdle() end
+	end)
+	
+	createSelectionGUI()
+end
+
+if player.Character then loadCharacter(player.Character) end
+player.CharacterAdded:Connect(loadCharacter)
+RunService.RenderStepped:Connect(update)
