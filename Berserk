@@ -32,7 +32,8 @@ local STANCES = {
 		{Name = "Stance 1", Id = "rbxassetid://87330646928482"},
 		{Name = "Stance 2", Id = "rbxassetid://108313166344264"},
 		{Name = "Stance 3", Id = "rbxassetid://122770553953898"},
-		{Name = "Stance 4", Id = "rbxassetid://108706945249305"}
+		{Name = "Stance 4", Id = "rbxassetid://108706945249305"},
+		{Name = "Stance 5", Id = "rbxassetid://115257039490090"}
 	},
 	Berserker = {
 		{Name = "Stance 1", Id = "rbxassetid://137436487987645"},
