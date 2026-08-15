@@ -42,7 +42,7 @@ local STANCES = {
 		{Name = "Stance 2", Id = "rbxassetid://108313166344264"},
 		{Name = "Stance 3", Id = "rbxassetid://122770553953898"},
 		{Name = "Stance 4", Id = "rbxassetid://108706945249305"},
-		{Name = "Stance 5", Id = "rbxassetid://BURAYA_5_ID_GELECEK"} -- Guts'un 5. Stance'i eklendi
+		{Name = "Stance 5", Id = "rbxassetid://115257039490090"}
 	},
 	Berserker = {
 		{Name = "Stance 1", Id = "rbxassetid://137436487987645"},
@@ -171,6 +171,7 @@ end
 --============================================================
 -- ÖZEL SALDIRI & YETENEK FONKSİYONLARI
 --============================================================
+
 local function playAttack(animId)
 	if not animator then return end
 
@@ -195,26 +196,23 @@ local function playAttack(animId)
 end
 
 local function activateSmellThem()
-	-- Haritadaki herkesi bul (kendimiz hariç)
 	for _, obj in ipairs(workspace:GetDescendants()) do
 		if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj ~= character then
 			
 			local hl = Instance.new("Highlight")
 			hl.Name = "BerserkSmell"
-			hl.FillColor = Color3.fromRGB(180, 0, 0) -- Kan kırmızı
+			hl.FillColor = Color3.fromRGB(180, 0, 0)
 			hl.OutlineColor = Color3.fromRGB(255, 0, 0)
-			hl.FillTransparency = 1 -- Başlangıçta görünmez
+			hl.FillTransparency = 1 
 			hl.OutlineTransparency = 1
 			hl.Parent = obj
 			
-			-- Yumuşak bir şekilde görünür yap
 			local tweenIn = TweenService:Create(hl, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 				FillTransparency = 0.6,
 				OutlineTransparency = 0
 			})
 			tweenIn:Play()
 			
-			-- 5 Saniye sonra sil
 			task.delay(5, function()
 				if hl and hl.Parent then
 					local tweenOut = TweenService:Create(hl, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -310,6 +308,7 @@ local function createDropdown(parent, titleText, udimPos, anchor, sizeVec, items
 	container.Position = udimPos
 	container.AnchorPoint = anchor
 	container.BackgroundTransparency = 1
+	container.ZIndex = (type == "Attack") and 10 or 1
 	container.Parent = parent
 
 	local mainBtn = Instance.new("TextButton")
@@ -321,6 +320,7 @@ local function createDropdown(parent, titleText, udimPos, anchor, sizeVec, items
 	mainBtn.Text = titleText
 	mainBtn.TextColor3 = Color3.fromRGB(255, 0, 0)
 	mainBtn.TextSize = 22
+	mainBtn.ZIndex = container.ZIndex
 	mainBtn.Parent = container
 
 	local listFrame = Instance.new("Frame")
@@ -330,6 +330,7 @@ local function createDropdown(parent, titleText, udimPos, anchor, sizeVec, items
 	listFrame.BorderColor3 = COLOR_BORDER
 	listFrame.BorderSizePixel = 2
 	listFrame.ClipsDescendants = true
+	listFrame.ZIndex = container.ZIndex
 	listFrame.Parent = container
 
 	local listLayout = Instance.new("UIListLayout")
@@ -354,6 +355,7 @@ local function createDropdown(parent, titleText, udimPos, anchor, sizeVec, items
 		btn.Text = item.Name
 		btn.TextColor3 = COLOR_TEXT
 		btn.TextSize = 18
+		btn.ZIndex = container.ZIndex
 		btn.Parent = listFrame
 
 		if type == "Stance" then table.insert(stanceButtons, {btn = btn, id = item.Id}) end
@@ -401,17 +403,16 @@ local function loadCombatGUI()
 		createDropdown(combatGui, "ATTACK", UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0), UDim2.new(0, 200, 0, 40), ATTACKS[currentStyle], "Attack")
 	end
 	
-	if ABILITIES[currentStyle] then
-		-- Attack butonunun altına yerleştirildi (Y: 60)
-		createDropdown(combatGui, "ABILITIES", UDim2.new(0.5, 0, 0, 60), Vector2.new(0.5, 0), UDim2.new(0, 200, 0, 40), ABILITIES[currentStyle], "Ability")
-	end
-
 	if STANCES[currentStyle] then
 		createDropdown(combatGui, "DRAGON SLAYER", UDim2.new(0, 10, 0.5, -100), Vector2.new(0, 0.5), UDim2.new(0, 180, 0, 40), STANCES[currentStyle], "Stance")
 	end
 
 	if VOICES[currentStyle] then
 		createDropdown(combatGui, "VOICE LINES", UDim2.new(1, -10, 0.5, -100), Vector2.new(1, 0.5), UDim2.new(0, 180, 0, 40), VOICES[currentStyle], "Voice")
+	end
+
+	if ABILITIES[currentStyle] then
+		createDropdown(combatGui, "ABILITIES", UDim2.new(1, -10, 0.5, 80), Vector2.new(1, 0.5), UDim2.new(0, 180, 0, 40), ABILITIES[currentStyle], "Ability")
 	end
 end
 
@@ -464,7 +465,6 @@ local function createSelectionGUI()
 			if style == "Berserker" then 
 				applyBerserkerEffects() 
 				
-				-- Berserker Hız Kilidi
 				speedCoroutine = task.spawn(function()
 					while currentStyle == "Berserker" do
 						if humanoid then humanoid.WalkSpeed = BERSERKER_SPEED end
@@ -472,7 +472,6 @@ local function createSelectionGUI()
 					end
 				end)
 			else
-				-- Diğer stillerde hızı sıfırla
 				if humanoid then humanoid.WalkSpeed = DEFAULT_SPEED end
 			end
 			
@@ -502,9 +501,6 @@ local function update()
 	local state = humanoid:GetState()
 	local airborne = state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall or state == Enum.HumanoidStateType.FallingDown
 
-	--========================================================
-	-- 1. DURUM: Hareketsiz (Idle)
-	--========================================================
 	if not moving and not airborne then
 		if runTrack and runTrack.IsPlaying then runTrack:Stop(0.2) end
 		
@@ -516,9 +512,6 @@ local function update()
 		return
 	end
 
-	--========================================================
-	-- 2. DURUM: Hareket Halinde (Run)
-	--========================================================
 	if moving and not airborne then
 		if idleTrack and idleTrack.IsPlaying then idleTrack:Stop(0.2) end
 		
@@ -535,9 +528,6 @@ local function update()
 		return
 	end
 
-	--========================================================
-	-- 3. DURUM: Havada (Airborne)
-	--========================================================
 	if airborne then
 		if idleTrack and idleTrack.IsPlaying then idleTrack:Stop(0.2) end
 		if runTrack and runTrack.IsPlaying then runTrack:Stop(0.2) end
