@@ -1,13 +1,15 @@
 --============================================================
--- BERSERK COMBAT & ANIMATION HUB
+-- BERSERK COMBAT & ANIMATION HUB (DARK ATMOSPHERE EDITION)
 --============================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local camera = workspace.CurrentCamera
 
 --============================================================
 -- ID'LER & CONFIG
@@ -16,10 +18,18 @@ local playerGui = player:WaitForChild("PlayerGui")
 local VIGNETTE_ID = "rbxassetid://103209433132705"
 local RUN_ANIM = "rbxassetid://87380318549717"
 local GUTS_INJURED_IDLE = "rbxassetid://102062435685174"
+local ECLIPSE_SKYBOX = "rbxassetid://15049615178"
+
+local WHISPERS = {
+	"136833080474934",
+	"85064677546638",
+	"79028898635420"
+}
 
 -- Hız Ayarları
 local BERSERKER_SPEED = 24
 local DEFAULT_SPEED = 16
+local DEBUFF_SPEED = 8
 
 local IDLE_ANIMS = {
 	Berserker = {{Id = "rbxassetid://139995488323628", Weight = 1}},
@@ -82,7 +92,222 @@ local currentVoice = nil
 
 local idleTrack, runTrack, attackTrack, idleConnection
 local gui, vfxGui, combatGui
+
 local speedCoroutine = nil
+local backgroundLoops = nil
+
+local isDebuffed = false
+local wasBerserker = false
+
+local inDarkSky = false
+local cursedSpirits = {}
+
+--============================================================
+-- TITLES (UNVANLAR)
+--============================================================
+
+local function applyTitle()
+	if not character then return end
+	local head = character:WaitForChild("Head", 5)
+	
+	if head then
+		local oldTag = head:FindFirstChild("PlayerTitle")
+		if oldTag then oldTag:Destroy() end
+		
+		local titleText = ""
+		if currentStyle == "Berserker" then titleText = "THE BERSERKER"
+		elseif currentStyle == "Guts" then titleText = "BLACK SWORDSMAN"
+		else return end
+
+		local bb = Instance.new("BillboardGui")
+		bb.Name = "PlayerTitle"
+		bb.Size = UDim2.new(0, 200, 0, 40) 
+		bb.StudsOffset = Vector3.new(0, 3.5, 0)
+		bb.AlwaysOnTop = true
+		
+		local txt = Instance.new("TextLabel")
+		txt.Size = UDim2.new(1, 0, 1, 0)
+		txt.BackgroundTransparency = 1
+		txt.Text = titleText
+		txt.TextColor3 = Color3.fromRGB(180, 0, 0)
+		txt.Font = Enum.Font.Oswald
+		txt.TextScaled = true
+		txt.Parent = bb
+		
+		bb.Parent = head
+	end
+end
+
+--============================================================
+-- DEBUFF SİSTEMİ
+--============================================================
+
+local function applyBerserkerDebuff()
+	if isDebuffed then return end
+	isDebuffed = true
+	wasBerserker = false
+	
+	if humanoid then humanoid.WalkSpeed = DEBUFF_SPEED end
+	
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = "BerserkDebuffCC"
+	cc.Saturation = -1
+	cc.Contrast = 0.2
+	cc.Parent = Lighting
+	
+	TweenService:Create(camera, TweenInfo.new(2), {FieldOfView = 50}):Play()
+	
+	task.delay(15, function()
+		if cc and cc.Parent then
+			local t = TweenService:Create(cc, TweenInfo.new(3), {Saturation = 0, Contrast = 0})
+			t:Play()
+			t.Completed:Connect(function() cc:Destroy() end)
+		end
+		TweenService:Create(camera, TweenInfo.new(3), {FieldOfView = 70}):Play()
+		if humanoid and isDebuffed then humanoid.WalkSpeed = DEFAULT_SPEED end
+		isDebuffed = false
+	end)
+end
+
+--============================================================
+-- KARANLIK GÖKYÜZÜ (5 SANİYELİK ATMOSFER - DÜZELTİLMİŞ)
+--============================================================
+
+local function triggerDarkSky()
+	if inDarkSky then return end
+	inDarkSky = true
+
+	local oldSky = Lighting:FindFirstChildOfClass("Sky")
+	if oldSky then
+		oldSky.Parent = nil
+	end
+
+	local oldAmbient = Lighting.Ambient
+	local oldOutdoor = Lighting.OutdoorAmbient
+	local oldBrightness = Lighting.Brightness
+
+	local sky = Instance.new("Sky")
+	sky.Name = "TempDarkSky"
+
+	sky.SkyboxBk = ECLIPSE_SKYBOX
+	sky.SkyboxDn = ECLIPSE_SKYBOX
+	sky.SkyboxFt = ECLIPSE_SKYBOX
+	sky.SkyboxLf = ECLIPSE_SKYBOX
+	sky.SkyboxRt = ECLIPSE_SKYBOX
+	sky.SkyboxUp = ECLIPSE_SKYBOX
+
+	sky.Parent = Lighting
+
+	TweenService:Create(
+		Lighting,
+		TweenInfo.new(1),
+		{
+			Ambient = Color3.fromRGB(5, 0, 0),
+			OutdoorAmbient = Color3.fromRGB(5, 0, 0),
+			Brightness = 0.2
+		}
+	):Play()
+
+	task.delay(5, function()
+		if sky and sky.Parent then
+			sky:Destroy()
+		end
+
+		if oldSky then
+			oldSky.Parent = Lighting
+		end
+
+		TweenService:Create(
+			Lighting,
+			TweenInfo.new(2),
+			{
+				Ambient = oldAmbient,
+				OutdoorAmbient = oldOutdoor,
+				Brightness = oldBrightness
+			}
+		):Play()
+
+		task.delay(2, function()
+			inDarkSky = false
+		end)
+	end)
+end
+
+--============================================================
+-- GÖLGE RUHLAR VE FISILTILAR
+--============================================================
+
+local function spawnCursedSpirit()
+	if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+	local root = character.HumanoidRootPart
+	
+	local spirit = Instance.new("Part")
+	spirit.Size = Vector3.new(2, 4, 2)
+	spirit.Color = Color3.fromRGB(15, 0, 25)
+	spirit.Material = Enum.Material.Neon
+	spirit.Transparency = 0.4
+	spirit.Anchored = true
+	spirit.CanCollide = false
+	
+	local angle = math.random() * math.pi * 2
+	local offset = Vector3.new(math.cos(angle) * math.random(25, 40), -1, math.sin(angle) * math.random(25, 40))
+	spirit.Position = root.Position + offset
+	spirit.Parent = workspace
+	
+	local isAggressive = math.random(1, 2) == 2
+	local speed = isAggressive and (math.random(40, 80) / 100) or 0
+	
+	local spiritData = {
+		Part = spirit,
+		IsAggressive = isAggressive,
+		Speed = speed
+	}
+	table.insert(cursedSpirits, spiritData)
+	
+	task.delay(5, function()
+		if spirit and spirit.Parent then
+			local tween = TweenService:Create(spirit, TweenInfo.new(0.5), {Transparency = 1})
+			tween:Play()
+			tween.Completed:Connect(function() spirit:Destroy() end)
+		end
+	end)
+end
+
+local function playWhisper()
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxassetid://" .. WHISPERS[math.random(1, #WHISPERS)]
+	sound.Volume = 1
+	sound.Parent = camera
+	sound:Play()
+	sound.Ended:Connect(function() sound:Destroy() end)
+end
+
+--============================================================
+-- ARKA PLAN DÖNGÜLERİ (EVENTS)
+--============================================================
+
+local function startBackgroundEvents()
+	if backgroundLoops then task.cancel(backgroundLoops) end
+	backgroundLoops = task.spawn(function()
+		local spiritTimer = 0
+		while currentStyle == "Guts" or currentStyle == "Berserker" do
+			task.wait(1)
+			
+			if not inDarkSky and math.random(1, 100) == 1 then
+				triggerDarkSky()
+			end
+			
+			spiritTimer += 1
+			if spiritTimer >= 10 then
+				spiritTimer = 0
+				if math.random(1, 10) == 1 then
+					spawnCursedSpirit()
+					playWhisper()
+				end
+			end
+		end
+	end)
+end
 
 --============================================================
 -- EFEKT VE TEMİZLİK
@@ -130,18 +355,13 @@ end
 local function playVoice(id)
 	if not character or not character:FindFirstChild("Head") then return end
 	if currentVoice then currentVoice:Destroy() end
-	
 	local sound = Instance.new("Sound")
 	sound.SoundId = "rbxassetid://" .. id
 	sound.Volume = 2
 	sound.Parent = character.Head
 	sound:Play()
 	currentVoice = sound
-	
-	sound.Ended:Connect(function()
-		if sound == currentVoice then currentVoice = nil end
-		sound:Destroy()
-	end)
+	sound.Ended:Connect(function() if sound == currentVoice then currentVoice = nil end; sound:Destroy() end)
 end
 
 local function stopDefaultAnimations()
@@ -174,19 +394,12 @@ end
 
 local function playAttack(animId)
 	if not animator then return end
-
-	if attackTrack then
-		pcall(function() attackTrack:Stop(0.2); attackTrack:Destroy() end)
-		attackTrack = nil
-	end
-
+	if attackTrack then pcall(function() attackTrack:Stop(0.2); attackTrack:Destroy() end); attackTrack = nil end
 	local animation = Instance.new("Animation")
 	animation.AnimationId = animId
 	animation.Name = "CustomAttack"
-	
 	local success, track = pcall(function() return animator:LoadAnimation(animation) end)
 	animation:Destroy()
-	
 	if success and track then
 		attackTrack = track
 		attackTrack.Priority = Enum.AnimationPriority.Action4
@@ -198,7 +411,6 @@ end
 local function activateSmellThem()
 	for _, obj in ipairs(workspace:GetDescendants()) do
 		if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj ~= character then
-			
 			local hl = Instance.new("Highlight")
 			hl.Name = "BerserkSmell"
 			hl.FillColor = Color3.fromRGB(180, 0, 0)
@@ -206,24 +418,13 @@ local function activateSmellThem()
 			hl.FillTransparency = 1 
 			hl.OutlineTransparency = 1
 			hl.Parent = obj
-			
-			local tweenIn = TweenService:Create(hl, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				FillTransparency = 0.6,
-				OutlineTransparency = 0
-			})
+			local tweenIn = TweenService:Create(hl, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {FillTransparency = 0.6, OutlineTransparency = 0})
 			tweenIn:Play()
-			
 			task.delay(5, function()
 				if hl and hl.Parent then
-					local tweenOut = TweenService:Create(hl, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-						FillTransparency = 1,
-						OutlineTransparency = 1
-					})
+					local tweenOut = TweenService:Create(hl, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {FillTransparency = 1, OutlineTransparency = 1})
 					tweenOut:Play()
-					
-					tweenOut.Completed:Connect(function()
-						hl:Destroy()
-					end)
+					tweenOut.Completed:Connect(function() hl:Destroy() end)
 				end
 			end)
 		end
@@ -232,18 +433,11 @@ end
 
 local function playIdle()
 	if not animator or not currentStyle or not isIdle() then return end
-
-	if idleTrack then
-		pcall(function() idleTrack:Stop(0.2); idleTrack:Destroy() end)
-		idleTrack = nil
-	end
+	if idleTrack then pcall(function() idleTrack:Stop(0.2); idleTrack:Destroy() end); idleTrack = nil end
 
 	local animIdToPlay = nil
-
-	if currentStanceId then
-		animIdToPlay = currentStanceId
-	elseif currentStyle == "Guts" and humanoid.Health <= (humanoid.MaxHealth * 0.3) then
-		animIdToPlay = GUTS_INJURED_IDLE
+	if currentStanceId then animIdToPlay = currentStanceId
+	elseif currentStyle == "Guts" and humanoid.Health <= (humanoid.MaxHealth * 0.3) then animIdToPlay = GUTS_INJURED_IDLE
 	else
 		local list = IDLE_ANIMS[currentStyle]
 		if list then
@@ -259,11 +453,8 @@ local function playIdle()
 	end
 
 	if not animIdToPlay then return end
-
 	local animation = Instance.new("Animation")
 	animation.AnimationId = animIdToPlay
-	animation.Name = "CustomIdle"
-	
 	local success, track = pcall(function() return animator:LoadAnimation(animation) end)
 	animation:Destroy()
 	
@@ -271,7 +462,6 @@ local function playIdle()
 		idleTrack = track
 		idleTrack.Priority = Enum.AnimationPriority.Action3
 		idleTrack.Looped = not (currentStyle == "Guts" and not currentStanceId)
-		
 		idleConnection = idleTrack.Ended:Connect(function()
 			if idleTrack == track and humanoid and humanoid.Health > 0 and isIdle() then
 				task.wait(0.08)
@@ -285,12 +475,10 @@ end
 local function createRun()
 	if not animator or not currentStyle or not RUN_ENABLED[currentStyle] then return end
 	if runTrack then pcall(function() runTrack:Stop(0.2); runTrack:Destroy() end) end
-
 	local animation = Instance.new("Animation")
 	animation.AnimationId = RUN_ANIM
 	local success, track = pcall(function() return animator:LoadAnimation(animation) end)
 	animation:Destroy()
-	
 	if success and track then
 		runTrack = track
 		runTrack.Priority = Enum.AnimationPriority.Action2
@@ -357,23 +545,14 @@ local function createDropdown(parent, titleText, udimPos, anchor, sizeVec, items
 		btn.TextSize = 18
 		btn.ZIndex = container.ZIndex
 		btn.Parent = listFrame
-
 		if type == "Stance" then table.insert(stanceButtons, {btn = btn, id = item.Id}) end
 
 		btn.MouseButton1Click:Connect(function()
-			if type == "Voice" then
-				playVoice(item.Id)
-			elseif type == "Attack" then
-				playAttack(item.Id)
-			elseif type == "Ability" then
-				if item.Id == "SMELL_THEM" then activateSmellThem() end
+			if type == "Voice" then playVoice(item.Id)
+			elseif type == "Attack" then playAttack(item.Id)
+			elseif type == "Ability" then if item.Id == "SMELL_THEM" then activateSmellThem() end
 			elseif type == "Stance" then
-				if currentStanceId == item.Id then
-					currentStanceId = nil
-				else
-					currentStanceId = item.Id
-				end
-				
+				if currentStanceId == item.Id then currentStanceId = nil else currentStanceId = item.Id end
 				for _, d in ipairs(stanceButtons) do
 					if d.id == currentStanceId then
 						d.btn.Text = "SEÇİLİ"
@@ -402,15 +581,12 @@ local function loadCombatGUI()
 	if ATTACKS[currentStyle] then
 		createDropdown(combatGui, "ATTACK", UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0), UDim2.new(0, 200, 0, 40), ATTACKS[currentStyle], "Attack")
 	end
-	
 	if STANCES[currentStyle] then
 		createDropdown(combatGui, "DRAGON SLAYER", UDim2.new(0, 10, 0.5, -100), Vector2.new(0, 0.5), UDim2.new(0, 180, 0, 40), STANCES[currentStyle], "Stance")
 	end
-
 	if VOICES[currentStyle] then
 		createDropdown(combatGui, "VOICE LINES", UDim2.new(1, -10, 0.5, -100), Vector2.new(1, 0.5), UDim2.new(0, 180, 0, 40), VOICES[currentStyle], "Voice")
 	end
-
 	if ABILITIES[currentStyle] then
 		createDropdown(combatGui, "ABILITIES", UDim2.new(1, -10, 0.5, 80), Vector2.new(1, 0.5), UDim2.new(0, 180, 0, 40), ABILITIES[currentStyle], "Ability")
 	end
@@ -459,21 +635,27 @@ local function createSelectionGUI()
 		btn.MouseButton1Click:Connect(function()
 			gui:Destroy()
 			gui = nil
+			
+			if wasBerserker and style ~= "Berserker" then applyBerserkerDebuff() end
+			
 			currentStyle = style
 			currentStanceId = nil
 			
 			if style == "Berserker" then 
+				wasBerserker = true
 				applyBerserkerEffects() 
-				
 				speedCoroutine = task.spawn(function()
 					while currentStyle == "Berserker" do
-						if humanoid then humanoid.WalkSpeed = BERSERKER_SPEED end
+						if humanoid and not isDebuffed then humanoid.WalkSpeed = BERSERKER_SPEED end
 						task.wait(2)
 					end
 				end)
 			else
-				if humanoid then humanoid.WalkSpeed = DEFAULT_SPEED end
+				if humanoid and not isDebuffed then humanoid.WalkSpeed = DEFAULT_SPEED end
 			end
+			
+			applyTitle()
+			startBackgroundEvents()
 			
 			task.wait(0.1)
 			if animator then
@@ -497,33 +679,54 @@ local function update()
 	
 	stopDefaultAnimations()
 
+	-- Ruhların Yönlendirilmesi ve Çarpışma Kontrolü
+	if character and character:FindFirstChild("HumanoidRootPart") then
+		local pPos = character.HumanoidRootPart.Position
+		for i = #cursedSpirits, 1, -1 do
+			local sData = cursedSpirits[i]
+			local s = sData.Part
+			
+			if s and s.Parent then
+				local dist = (pPos - s.Position).Magnitude
+				
+				if dist < 3 then
+					-- Oyuncuya Dokunduysa Sil
+					s:Destroy()
+					table.remove(cursedSpirits, i)
+				else
+					-- Saldırgan veya Gözlemci Hareketleri
+					if sData.IsAggressive then
+						local dir = (pPos - s.Position).Unit
+						s.CFrame = s.CFrame + (dir * sData.Speed)
+					else
+						-- Sadece bakarak hafif süzülür
+						s.CFrame = CFrame.new(s.Position, Vector3.new(pPos.X, s.Position.Y, pPos.Z))
+					end
+				end
+			else
+				table.remove(cursedSpirits, i)
+			end
+		end
+	end
+
 	local moving = humanoid.MoveDirection.Magnitude > 0.05
 	local state = humanoid:GetState()
 	local airborne = state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall or state == Enum.HumanoidStateType.FallingDown
 
 	if not moving and not airborne then
 		if runTrack and runTrack.IsPlaying then runTrack:Stop(0.2) end
-		
 		if not attackTrack or not attackTrack.IsPlaying then
-			if not idleTrack or not idleTrack.IsPlaying then 
-				playIdle() 
-			end
+			if not idleTrack or not idleTrack.IsPlaying then playIdle() end
 		end
 		return
 	end
 
 	if moving and not airborne then
 		if idleTrack and idleTrack.IsPlaying then idleTrack:Stop(0.2) end
-		
-		if attackTrack and attackTrack.IsPlaying then
-			attackTrack:Stop(0.2)
-		end
-		
+		if attackTrack and attackTrack.IsPlaying then attackTrack:Stop(0.2) end
 		if RUN_ENABLED[currentStyle] then
 			if not runTrack then createRun() end
-			if runTrack and not runTrack.IsPlaying then 
-				runTrack:Play(0.2, 1, 1)
-			end
+			if runTrack and not runTrack.IsPlaying then runTrack:Play(0.2, 1, 1) end
 		end
 		return
 	end
@@ -544,16 +747,19 @@ local function loadCharacter(char)
 	humanoid = character:WaitForChild("Humanoid")
 	animator = humanoid:WaitForChild("Animator")
 	
+	humanoid.Died:Connect(function()
+		if wasBerserker then applyBerserkerDebuff() end
+	end)
+	
 	humanoid:GetPropertyChangedSignal("Health"):Connect(function()
 		if isIdle() and not currentStanceId then playIdle() end
 	end)
 	
 	createSelectionGUI()
+	
+	if currentStyle then applyTitle() end
 end
 
-if player.Character then 
-	loadCharacter(player.Character) 
-end
-
+if player.Character then loadCharacter(player.Character) end
 player.CharacterAdded:Connect(loadCharacter)
 RunService.RenderStepped:Connect(update)
