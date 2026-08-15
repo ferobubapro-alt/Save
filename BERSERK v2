@@ -1,5 +1,5 @@
 --============================================================
--- BERSERK COMBAT & ANIMATION HUB (DARK ATMOSPHERE EDITION)
+-- BERSERK COMBAT & ANIMATION HUB (SYNCED MULTIPLAYER EDITION)
 --============================================================
 
 local Players = game:GetService("Players")
@@ -74,7 +74,6 @@ local VOICES = {
 
 local RUN_ENABLED = { Berserker = true, Guts = true, Griffith = false }
 
--- THEME COLORS
 local COLOR_BG = Color3.fromRGB(15, 0, 0)
 local COLOR_BORDER = Color3.fromRGB(120, 0, 0)
 local COLOR_TEXT = Color3.fromRGB(220, 220, 220)
@@ -88,35 +87,50 @@ local FONT_THEME = Enum.Font.Oswald
 local character, humanoid, animator
 local currentStyle = nil
 local currentStanceId = nil
-local currentVoice = nil
 
 local idleTrack, runTrack, attackTrack, idleConnection
 local gui, vfxGui, combatGui
-
-local speedCoroutine = nil
-local backgroundLoops = nil
+local speedCoroutine, backgroundLoops = nil, nil
 
 local isDebuffed = false
 local wasBerserker = false
-
 local inDarkSky = false
 local cursedSpirits = {}
 
 --============================================================
--- TITLES (UNVANLAR)
+-- HIDDEN CHAT SYNC (SENKRONİZASYON AĞI)
 --============================================================
 
-local function applyTitle()
-	if not character then return end
-	local head = character:WaitForChild("Head", 5)
+local function sendSync(action, data)
+	local msg = "/e BSYNC|" .. action
+	if data then msg = msg .. "|" .. tostring(data) end
 	
+	pcall(function()
+		local legacyChat = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+		if legacyChat and legacyChat:FindFirstChild("SayMessageRequest") then
+			legacyChat.SayMessageRequest:FireServer(msg, "All")
+		else
+			local tcs = game:GetService("TextChatService")
+			local channel = tcs:FindFirstChild("TextChannels") and tcs.TextChannels:FindFirstChild("RBXGeneral")
+			if channel then channel:SendAsync(msg) else Players:Chat(msg) end
+		end
+	end)
+end
+
+--============================================================
+-- TITLES & VOICES (SENKRONİZE EDİLEBİLİR)
+--============================================================
+
+local function applyTitleToChar(char, style)
+	if not char then return end
+	local head = char:WaitForChild("Head", 5)
 	if head then
 		local oldTag = head:FindFirstChild("PlayerTitle")
 		if oldTag then oldTag:Destroy() end
 		
 		local titleText = ""
-		if currentStyle == "Berserker" then titleText = "THE BERSERKER"
-		elseif currentStyle == "Guts" then titleText = "BLACK SWORDSMAN"
+		if style == "Berserker" then titleText = "THE BERSERKER"
+		elseif style == "Guts" then titleText = "BLACK SWORDSMAN"
 		else return end
 
 		local bb = Instance.new("BillboardGui")
@@ -138,8 +152,25 @@ local function applyTitle()
 	end
 end
 
+local function playVoiceOnChar(char, id)
+	if not char then return end
+	local head = char:FindFirstChild("Head")
+	if not head then return end
+	
+	local oldVoice = head:FindFirstChild("BerserkVoice")
+	if oldVoice then oldVoice:Destroy() end
+	
+	local sound = Instance.new("Sound")
+	sound.Name = "BerserkVoice"
+	sound.SoundId = "rbxassetid://" .. id
+	sound.Volume = 2
+	sound.Parent = head
+	sound:Play()
+	sound.Ended:Connect(function() sound:Destroy() end)
+end
+
 --============================================================
--- DEBUFF SİSTEMİ
+-- DEBUFF SİSTEMİ (SADECE LOKAL KİŞİYE)
 --============================================================
 
 local function applyBerserkerDebuff()
@@ -170,7 +201,7 @@ local function applyBerserkerDebuff()
 end
 
 --============================================================
--- KARANLIK GÖKYÜZÜ (5 SANİYELİK ATMOSFER - DÜZELTİLMİŞ)
+-- KARANLIK GÖKYÜZÜ (5 SANİYELİK ATMOSFER)
 --============================================================
 
 local function triggerDarkSky()
@@ -178,9 +209,7 @@ local function triggerDarkSky()
 	inDarkSky = true
 
 	local oldSky = Lighting:FindFirstChildOfClass("Sky")
-	if oldSky then
-		oldSky.Parent = nil
-	end
+	if oldSky then oldSky.Parent = nil end
 
 	local oldAmbient = Lighting.Ambient
 	local oldOutdoor = Lighting.OutdoorAmbient
@@ -188,58 +217,41 @@ local function triggerDarkSky()
 
 	local sky = Instance.new("Sky")
 	sky.Name = "TempDarkSky"
-
 	sky.SkyboxBk = ECLIPSE_SKYBOX
 	sky.SkyboxDn = ECLIPSE_SKYBOX
 	sky.SkyboxFt = ECLIPSE_SKYBOX
 	sky.SkyboxLf = ECLIPSE_SKYBOX
 	sky.SkyboxRt = ECLIPSE_SKYBOX
 	sky.SkyboxUp = ECLIPSE_SKYBOX
-
 	sky.Parent = Lighting
 
-	TweenService:Create(
-		Lighting,
-		TweenInfo.new(1),
-		{
-			Ambient = Color3.fromRGB(5, 0, 0),
-			OutdoorAmbient = Color3.fromRGB(5, 0, 0),
-			Brightness = 0.2
-		}
-	):Play()
+	TweenService:Create(Lighting, TweenInfo.new(1), {
+		Ambient = Color3.fromRGB(5, 0, 0),
+		OutdoorAmbient = Color3.fromRGB(5, 0, 0),
+		Brightness = 0.2
+	}):Play()
 
 	task.delay(5, function()
-		if sky and sky.Parent then
-			sky:Destroy()
-		end
+		if sky and sky.Parent then sky:Destroy() end
+		if oldSky then oldSky.Parent = Lighting end
 
-		if oldSky then
-			oldSky.Parent = Lighting
-		end
+		TweenService:Create(Lighting, TweenInfo.new(2), {
+			Ambient = oldAmbient,
+			OutdoorAmbient = oldOutdoor,
+			Brightness = oldBrightness
+		}):Play()
 
-		TweenService:Create(
-			Lighting,
-			TweenInfo.new(2),
-			{
-				Ambient = oldAmbient,
-				OutdoorAmbient = oldOutdoor,
-				Brightness = oldBrightness
-			}
-		):Play()
-
-		task.delay(2, function()
-			inDarkSky = false
-		end)
+		task.delay(2, function() inDarkSky = false end)
 	end)
 end
 
 --============================================================
--- GÖLGE RUHLAR VE FISILTILAR
+-- GÖLGE RUHLAR VE YETENEKLER
 --============================================================
 
-local function spawnCursedSpirit()
-	if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-	local root = character.HumanoidRootPart
+local function spawnCursedSpiritFor(targetChar)
+	if not targetChar or not targetChar:FindFirstChild("HumanoidRootPart") then return end
+	local root = targetChar.HumanoidRootPart
 	
 	local spirit = Instance.new("Part")
 	spirit.Size = Vector3.new(2, 4, 2)
@@ -260,7 +272,8 @@ local function spawnCursedSpirit()
 	local spiritData = {
 		Part = spirit,
 		IsAggressive = isAggressive,
-		Speed = speed
+		Speed = speed,
+		Target = targetChar
 	}
 	table.insert(cursedSpirits, spiritData)
 	
@@ -271,6 +284,30 @@ local function spawnCursedSpirit()
 			tween.Completed:Connect(function() spirit:Destroy() end)
 		end
 	end)
+end
+
+-- Smell Them kişiseldir, artık sendSync çalışmaz
+local function activateSmellThem()
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj ~= character then
+			local hl = Instance.new("Highlight")
+			hl.Name = "BerserkSmell"
+			hl.FillColor = Color3.fromRGB(180, 0, 0)
+			hl.OutlineColor = Color3.fromRGB(255, 0, 0)
+			hl.FillTransparency = 1 
+			hl.OutlineTransparency = 1
+			hl.Parent = obj
+			local tweenIn = TweenService:Create(hl, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {FillTransparency = 0.6, OutlineTransparency = 0})
+			tweenIn:Play()
+			task.delay(5, function()
+				if hl and hl.Parent then
+					local tweenOut = TweenService:Create(hl, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {FillTransparency = 1, OutlineTransparency = 1})
+					tweenOut:Play()
+					tweenOut.Completed:Connect(function() hl:Destroy() end)
+				end
+			end)
+		end
+	end
 end
 
 local function playWhisper()
@@ -295,13 +332,15 @@ local function startBackgroundEvents()
 			
 			if not inDarkSky and math.random(1, 100) == 1 then
 				triggerDarkSky()
+				sendSync("DARKSKY")
 			end
 			
 			spiritTimer += 1
 			if spiritTimer >= 10 then
 				spiritTimer = 0
 				if math.random(1, 10) == 1 then
-					spawnCursedSpirit()
+					spawnCursedSpiritFor(character)
+					sendSync("SPIRIT")
 					playWhisper()
 				end
 			end
@@ -349,20 +388,8 @@ local function applyBerserkerEffects()
 end
 
 --============================================================
--- SES & ANİMASYON FONKSİYONLARI
+-- ANİMASYON FONKSİYONLARI (ROBLOX OTOMATİK SENKRONİZE EDER)
 --============================================================
-
-local function playVoice(id)
-	if not character or not character:FindFirstChild("Head") then return end
-	if currentVoice then currentVoice:Destroy() end
-	local sound = Instance.new("Sound")
-	sound.SoundId = "rbxassetid://" .. id
-	sound.Volume = 2
-	sound.Parent = character.Head
-	sound:Play()
-	currentVoice = sound
-	sound.Ended:Connect(function() if sound == currentVoice then currentVoice = nil end; sound:Destroy() end)
-end
 
 local function stopDefaultAnimations()
 	if not animator then return end
@@ -388,10 +415,6 @@ local function isIdle()
 	return true
 end
 
---============================================================
--- ÖZEL SALDIRI & YETENEK FONKSİYONLARI
---============================================================
-
 local function playAttack(animId)
 	if not animator then return end
 	if attackTrack then pcall(function() attackTrack:Stop(0.2); attackTrack:Destroy() end); attackTrack = nil end
@@ -405,29 +428,6 @@ local function playAttack(animId)
 		attackTrack.Priority = Enum.AnimationPriority.Action4
 		attackTrack.Looped = false
 		attackTrack:Play(0.2, 1, 1)
-	end
-end
-
-local function activateSmellThem()
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj ~= character then
-			local hl = Instance.new("Highlight")
-			hl.Name = "BerserkSmell"
-			hl.FillColor = Color3.fromRGB(180, 0, 0)
-			hl.OutlineColor = Color3.fromRGB(255, 0, 0)
-			hl.FillTransparency = 1 
-			hl.OutlineTransparency = 1
-			hl.Parent = obj
-			local tweenIn = TweenService:Create(hl, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {FillTransparency = 0.6, OutlineTransparency = 0})
-			tweenIn:Play()
-			task.delay(5, function()
-				if hl and hl.Parent then
-					local tweenOut = TweenService:Create(hl, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {FillTransparency = 1, OutlineTransparency = 1})
-					tweenOut:Play()
-					tweenOut.Completed:Connect(function() hl:Destroy() end)
-				end
-			end)
-		end
 	end
 end
 
@@ -548,9 +548,16 @@ local function createDropdown(parent, titleText, udimPos, anchor, sizeVec, items
 		if type == "Stance" then table.insert(stanceButtons, {btn = btn, id = item.Id}) end
 
 		btn.MouseButton1Click:Connect(function()
-			if type == "Voice" then playVoice(item.Id)
-			elseif type == "Attack" then playAttack(item.Id)
-			elseif type == "Ability" then if item.Id == "SMELL_THEM" then activateSmellThem() end
+			if type == "Voice" then 
+				playVoiceOnChar(character, item.Id)
+				sendSync("VOICE", item.Id)
+			elseif type == "Attack" then 
+				playAttack(item.Id)
+			elseif type == "Ability" then 
+				if item.Id == "SMELL_THEM" then 
+					activateSmellThem() 
+					-- sendSync("SMELL") KODU KALDIRILDI, SADECE KULLANAN KİŞİ GÖRÜR.
+				end
 			elseif type == "Stance" then
 				if currentStanceId == item.Id then currentStanceId = nil else currentStanceId = item.Id end
 				for _, d in ipairs(stanceButtons) do
@@ -654,7 +661,8 @@ local function createSelectionGUI()
 				if humanoid and not isDebuffed then humanoid.WalkSpeed = DEFAULT_SPEED end
 			end
 			
-			applyTitle()
+			applyTitleToChar(character, currentStyle)
+			sendSync("STYLE", currentStyle)
 			startBackgroundEvents()
 			
 			task.wait(0.1)
@@ -671,6 +679,42 @@ local function createSelectionGUI()
 end
 
 --============================================================
+-- GİZLİ SOHBET (CHAT) ALICISI - DİĞER OYUNCULARI DİNLER
+--============================================================
+
+local function onChatted(sender, msg)
+	if sender == player then return end
+	if string.find(msg, "BSYNC|") then
+		local content = string.match(msg, "BSYNC|(.+)")
+		if content then
+			local parts = string.split(content, "|")
+			local action = parts[1]
+			local data = parts[2]
+			
+			if action == "STYLE" then
+				applyTitleToChar(sender.Character, data)
+			elseif action == "VOICE" then
+				playVoiceOnChar(sender.Character, data)
+			elseif action == "DARKSKY" then
+				triggerDarkSky()
+			elseif action == "SPIRIT" then
+				spawnCursedSpiritFor(sender.Character)
+			elseif action == "REQ" then
+				if currentStyle then sendSync("STYLE", currentStyle) end
+			end
+		end
+	end
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+	p.Chatted:Connect(function(msg) onChatted(p, msg) end)
+end
+Players.PlayerAdded:Connect(function(p)
+	p.Chatted:Connect(function(msg) onChatted(p, msg) end)
+end)
+task.delay(2, function() sendSync("REQ") end)
+
+--============================================================
 -- UPDATE (DÖNGÜ)
 --============================================================
 
@@ -679,33 +723,29 @@ local function update()
 	
 	stopDefaultAnimations()
 
-	-- Ruhların Yönlendirilmesi ve Çarpışma Kontrolü
-	if character and character:FindFirstChild("HumanoidRootPart") then
-		local pPos = character.HumanoidRootPart.Position
-		for i = #cursedSpirits, 1, -1 do
-			local sData = cursedSpirits[i]
-			local s = sData.Part
+	for i = #cursedSpirits, 1, -1 do
+		local sData = cursedSpirits[i]
+		local s = sData.Part
+		local targetChar = sData.Target
+		
+		if s and s.Parent and targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+			local pPos = targetChar.HumanoidRootPart.Position
+			local dist = (pPos - s.Position).Magnitude
 			
-			if s and s.Parent then
-				local dist = (pPos - s.Position).Magnitude
-				
-				if dist < 3 then
-					-- Oyuncuya Dokunduysa Sil
-					s:Destroy()
-					table.remove(cursedSpirits, i)
-				else
-					-- Saldırgan veya Gözlemci Hareketleri
-					if sData.IsAggressive then
-						local dir = (pPos - s.Position).Unit
-						s.CFrame = s.CFrame + (dir * sData.Speed)
-					else
-						-- Sadece bakarak hafif süzülür
-						s.CFrame = CFrame.new(s.Position, Vector3.new(pPos.X, s.Position.Y, pPos.Z))
-					end
-				end
-			else
+			if dist < 3 then
+				s:Destroy()
 				table.remove(cursedSpirits, i)
+			else
+				if sData.IsAggressive then
+					local dir = (pPos - s.Position).Unit
+					s.CFrame = s.CFrame + (dir * sData.Speed)
+				else
+					s.CFrame = CFrame.new(s.Position, Vector3.new(pPos.X, s.Position.Y, pPos.Z))
+				end
 			end
+		else
+			if s then s:Destroy() end
+			table.remove(cursedSpirits, i)
 		end
 	end
 
@@ -757,7 +797,10 @@ local function loadCharacter(char)
 	
 	createSelectionGUI()
 	
-	if currentStyle then applyTitle() end
+	if currentStyle then 
+		applyTitleToChar(character, currentStyle) 
+		sendSync("STYLE", currentStyle)
+	end
 end
 
 if player.Character then loadCharacter(player.Character) end
