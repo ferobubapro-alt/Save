@@ -1,10 +1,11 @@
 --============================================================
--- BERSERK COMBAT & ANIMATION HUB
+-- BERSERK COMBAT & ANIMATION HUB (VFX & ABILITIES UPDATE)
 --============================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -51,14 +52,21 @@ local VOICES = {
 	}
 }
 
+local ABILITIES = {
+	Berserker = {
+		{Name = "SMELL THEM", Action = "SmellThem"}
+	}
+}
+
 local RUN_ENABLED = { Berserker = true, Guts = true, Griffith = false }
 
 -- THEME COLORS
-local COLOR_BG = Color3.fromRGB(15, 0, 0) -- Karanlık Kırmızı/Siyah
-local COLOR_BORDER = Color3.fromRGB(120, 0, 0) -- Kan Kırmızısı
+local COLOR_BG = Color3.fromRGB(15, 0, 0)
+local COLOR_BORDER = Color3.fromRGB(120, 0, 0)
 local COLOR_TEXT = Color3.fromRGB(220, 220, 220)
 local COLOR_SELECTED = Color3.fromRGB(200, 0, 0)
 local FONT_THEME = Enum.Font.Oswald
+local CROSSFADE_TIME = 0.4 -- Animasyon yumuşaklık ayarı
 
 --============================================================
 -- VARIABLES
@@ -68,6 +76,7 @@ local character, humanoid, animator
 local currentStyle = nil
 local currentStanceId = nil
 local currentVoice = nil
+local smellThemCooldown = false
 
 local idleTrack, runTrack, idleConnection
 local gui, vfxGui, combatGui
@@ -78,26 +87,24 @@ local gui, vfxGui, combatGui
 
 local function clearVisuals()
 	if idleConnection then idleConnection:Disconnect(); idleConnection = nil end
-	if idleTrack then pcall(function() idleTrack:Stop(); idleTrack:Destroy() end); idleTrack = nil end
-	if runTrack then pcall(function() runTrack:Stop(); runTrack:Destroy() end); runTrack = nil end
+	if idleTrack then pcall(function() idleTrack:Stop(CROSSFADE_TIME); idleTrack:Destroy() end); idleTrack = nil end
+	if runTrack then pcall(function() runTrack:Stop(CROSSFADE_TIME); runTrack:Destroy() end); runTrack = nil end
 	
 	if gui then gui:Destroy(); gui = nil end
 	if vfxGui then vfxGui:Destroy(); vfxGui = nil end
 	if combatGui then combatGui:Destroy(); combatGui = nil end
+	
+	-- Işık ve Hız sıfırlama
+	if humanoid then humanoid.WalkSpeed = 16 end
+	if Lighting:FindFirstChild("BerserkCC") then Lighting.BerserkCC:Destroy() end
 end
 
 local function applyBerserkerEffects()
+	-- Ekran Vignette
 	vfxGui = Instance.new("ScreenGui")
 	vfxGui.Name = "BerserkerVFX"
 	vfxGui.IgnoreGuiInset = true
 	vfxGui.Parent = playerGui
-
-	local tint = Instance.new("Frame")
-	tint.Size = UDim2.new(1, 0, 1, 0)
-	tint.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-	tint.BackgroundTransparency = 0.85
-	tint.BorderSizePixel = 0
-	tint.Parent = vfxGui
 
 	local vignette = Instance.new("ImageLabel")
 	vignette.Size = UDim2.new(1, 0, 1, 0)
@@ -106,6 +113,55 @@ local function applyBerserkerEffects()
 	vignette.ImageTransparency = 0.15
 	vignette.ScaleType = Enum.ScaleType.Stretch
 	vignette.Parent = vfxGui
+	
+	-- Çevre Rengini Gri ve Kırmızı Karışımına Alma (Lighting)
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = "BerserkCC"
+	cc.Saturation = -0.7 -- Dünyayı grileştirir
+	cc.TintColor = Color3.fromRGB(200, 100, 100) -- Kırmızı/Gri pus verir
+	cc.Contrast = 0.2
+	cc.Parent = Lighting
+	
+	-- Hız Takviyesi
+	if humanoid then humanoid.WalkSpeed = 24 end
+end
+
+--============================================================
+-- BERSERKER YETENEKLERİ
+--============================================================
+
+local function activateSmellThem()
+	if smellThemCooldown then return end
+	smellThemCooldown = true
+	
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+			local targetChar = plr.Character
+			
+			local hl = Instance.new("Highlight")
+			hl.Name = "SmellThemHL"
+			hl.FillColor = Color3.fromRGB(150, 0, 0)
+			hl.OutlineColor = Color3.fromRGB(255, 0, 0)
+			hl.FillTransparency = 1
+			hl.OutlineTransparency = 1
+			hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+			hl.Parent = targetChar
+			
+			-- Smooth Belirme
+			TweenService:Create(hl, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {FillTransparency = 0.4, OutlineTransparency = 0}):Play()
+			
+			-- 5 Saniye Sonra Kaybolma
+			task.delay(5, function()
+				if hl and hl.Parent then
+					local outTween = TweenService:Create(hl, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {FillTransparency = 1, OutlineTransparency = 1})
+					outTween:Play()
+					outTween.Completed:Connect(function() hl:Destroy() end)
+				end
+			end)
+		end
+	end
+	
+	task.delay(6, function() smellThemCooldown = false end)
 end
 
 --============================================================
@@ -137,7 +193,7 @@ local function stopDefaultAnimations()
 			if anim then
 				local name = string.lower(anim.Name or "")
 				if name:find("idle") or name:find("walk") or name:find("run") then
-					pcall(function() track:Stop(0.1) end)
+					pcall(function() track:Stop(CROSSFADE_TIME) end)
 				end
 			end
 		end
@@ -157,19 +213,16 @@ local function playIdle()
 	if not animator or not currentStyle or not isIdle() then return end
 
 	if idleTrack then
-		pcall(function() idleTrack:Stop(0.1); idleTrack:Destroy() end)
+		pcall(function() idleTrack:Stop(CROSSFADE_TIME); idleTrack:Destroy() end)
 		idleTrack = nil
 	end
 
 	local animIdToPlay = nil
 
-	-- Öncelik 1: Stance Seçiliyse
 	if currentStanceId then
 		animIdToPlay = currentStanceId
-	-- Öncelik 2: Guts ve Can %30 altındaysa (Yaralı)
 	elseif currentStyle == "Guts" and humanoid.Health <= (humanoid.MaxHealth * 0.3) then
 		animIdToPlay = GUTS_INJURED_IDLE
-	-- Öncelik 3: Varsayılan Ağırlıklı Animasyonlar
 	else
 		local list = IDLE_ANIMS[currentStyle]
 		if list then
@@ -196,7 +249,7 @@ local function playIdle()
 	if success and track then
 		idleTrack = track
 		idleTrack.Priority = Enum.AnimationPriority.Action4
-		idleTrack.Looped = not (currentStyle == "Guts" and not currentStanceId) -- Normal Guts idle loop false
+		idleTrack.Looped = not (currentStyle == "Guts" and not currentStanceId) 
 		
 		idleConnection = idleTrack.Ended:Connect(function()
 			if idleTrack == track and humanoid and humanoid.Health > 0 and isIdle() then
@@ -204,13 +257,13 @@ local function playIdle()
 				if isIdle() then playIdle() end
 			end
 		end)
-		track:Play(0.15, 1, 1)
+		track:Play(CROSSFADE_TIME, 1, 1)
 	end
 end
 
 local function createRun()
 	if not animator or not currentStyle or not RUN_ENABLED[currentStyle] then return end
-	if runTrack then pcall(function() runTrack:Stop(); runTrack:Destroy() end) end
+	if runTrack then pcall(function() runTrack:Stop(CROSSFADE_TIME); runTrack:Destroy() end) end
 
 	local animation = Instance.new("Animation")
 	animation.AnimationId = RUN_ANIM
@@ -225,7 +278,7 @@ local function createRun()
 end
 
 --============================================================
--- GUI: COMBAT HUD (BLOODY/BLACK THEME)
+-- GUI: COMBAT HUD 
 --============================================================
 
 local function createDropdown(parent, titleText, udimPos, anchor, sizeVec, items, type)
@@ -285,22 +338,21 @@ local function createDropdown(parent, titleText, udimPos, anchor, sizeVec, items
 		btn.MouseButton1Click:Connect(function()
 			if type == "Voice" then
 				playVoice(item.Id)
+			elseif type == "Ability" then
+				if item.Action == "SmellThem" then activateSmellThem() end
 			elseif type == "Stance" then
 				if currentStanceId == item.Id then
-					currentStanceId = nil -- İptal et
+					currentStanceId = nil
 				else
-					currentStanceId = item.Id -- Seç
+					currentStanceId = item.Id
 				end
 				
-				-- Görsel Güncelleme (SEÇİLİ yazısı)
 				for _, d in ipairs(stanceButtons) do
 					if d.id == currentStanceId then
 						d.btn.Text = "SEÇİLİ"
 						d.btn.TextColor3 = Color3.fromRGB(0, 0, 0)
 						d.btn.BackgroundColor3 = COLOR_SELECTED
 					else
-						d.btn.Text = item.Name -- Orijinal ismine döndür (gerçek kodda item referansı kayacağı için basit tutuyoruz)
-						-- İsmini bul
 						for _, st in ipairs(items) do if st.Id == d.id then d.btn.Text = st.Name end end
 						d.btn.TextColor3 = COLOR_TEXT
 						d.btn.BackgroundColor3 = Color3.fromRGB(20, 0, 0)
@@ -331,10 +383,15 @@ local function loadCombatGUI()
 	if VOICES[currentStyle] then
 		createDropdown(combatGui, "VOICE LINES", UDim2.new(1, -10, 0.5, -100), Vector2.new(1, 0.5), UDim2.new(0, 180, 0, 40), VOICES[currentStyle], "Voice")
 	end
+	
+	-- SAĞ ALT: ABILITIES (Şimdilik sadece Berserker için Smell Them)
+	if ABILITIES[currentStyle] then
+		createDropdown(combatGui, "ABILITIES", UDim2.new(1, -10, 0.5, 80), Vector2.new(1, 0.5), UDim2.new(0, 180, 0, 40), ABILITIES[currentStyle], "Ability")
+	end
 end
 
 --============================================================
--- BAŞLANGIÇ GUI (KARAKTER SEÇİMİ)
+-- BAŞLANGIÇ GUI 
 --============================================================
 
 local function createSelectionGUI()
@@ -407,23 +464,23 @@ local function update()
 	local airborne = state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall or state == Enum.HumanoidStateType.FallingDown
 
 	if not moving and not airborne then
-		if runTrack and runTrack.IsPlaying then runTrack:Stop(0.12) end
+		if runTrack and runTrack.IsPlaying then runTrack:Stop(CROSSFADE_TIME) end
 		if not idleTrack or not idleTrack.IsPlaying then playIdle() end
 		return
 	end
 
 	if moving and not airborne then
-		if idleTrack and idleTrack.IsPlaying then idleTrack:Stop(0.12) end
+		if idleTrack and idleTrack.IsPlaying then idleTrack:Stop(CROSSFADE_TIME) end
 		if RUN_ENABLED[currentStyle] then
 			if not runTrack then createRun() end
-			if runTrack and not runTrack.IsPlaying then runTrack:Play(0.12, 1, 1) end
+			if runTrack and not runTrack.IsPlaying then runTrack:Play(CROSSFADE_TIME, 1, 1) end
 		end
 		return
 	end
 
 	if airborne then
-		if idleTrack and idleTrack.IsPlaying then idleTrack:Stop(0.1) end
-		if runTrack and runTrack.IsPlaying then runTrack:Stop(0.1) end
+		if idleTrack and idleTrack.IsPlaying then idleTrack:Stop(CROSSFADE_TIME) end
+		if runTrack and runTrack.IsPlaying then runTrack:Stop(CROSSFADE_TIME) end
 	end
 end
 
@@ -432,7 +489,6 @@ local function loadCharacter(char)
 	humanoid = character:WaitForChild("Humanoid")
 	animator = humanoid:WaitForChild("Animator")
 	
-	-- Guts'un canı değiştiğinde yaralı (injured) animasyonunu tetiklemek için:
 	humanoid:GetPropertyChangedSignal("Health"):Connect(function()
 		if isIdle() and not currentStanceId then playIdle() end
 	end)
