@@ -17,6 +17,10 @@ local VIGNETTE_ID = "rbxassetid://103209433132705"
 local RUN_ANIM = "rbxassetid://87380318549717"
 local GUTS_INJURED_IDLE = "rbxassetid://102062435685174"
 
+-- Hız Ayarları
+local BERSERKER_SPEED = 24
+local DEFAULT_SPEED = 16
+
 local IDLE_ANIMS = {
 	Berserker = {{Id = "rbxassetid://139995488323628", Weight = 1}},
 	Guts = {{Id = "rbxassetid://137746879738843", Weight = 1}}, 
@@ -28,12 +32,17 @@ local ATTACKS = {
 	Berserker = {{Name = "HEAVY STRIKE", Id = "rbxassetid://129528999809209"}}
 }
 
+local ABILITIES = {
+	Berserker = {{Name = "SMELL THEM", Id = "SMELL_THEM"}}
+}
+
 local STANCES = {
 	Guts = {
 		{Name = "Stance 1", Id = "rbxassetid://87330646928482"},
 		{Name = "Stance 2", Id = "rbxassetid://108313166344264"},
 		{Name = "Stance 3", Id = "rbxassetid://122770553953898"},
-		{Name = "Stance 4", Id = "rbxassetid://108706945249305"}
+		{Name = "Stance 4", Id = "rbxassetid://108706945249305"},
+		{Name = "Stance 5", Id = "rbxassetid://BURAYA_5_ID_GELECEK"} -- Guts'un 5. Stance'i eklendi
 	},
 	Berserker = {
 		{Name = "Stance 1", Id = "rbxassetid://137436487987645"},
@@ -73,12 +82,15 @@ local currentVoice = nil
 
 local idleTrack, runTrack, attackTrack, idleConnection
 local gui, vfxGui, combatGui
+local speedCoroutine = nil
 
 --============================================================
 -- EFEKT VE TEMİZLİK
 --============================================================
 
 local function clearVisuals()
+	if speedCoroutine then task.cancel(speedCoroutine); speedCoroutine = nil end
+	
 	if idleConnection then idleConnection:Disconnect(); idleConnection = nil end
 	if idleTrack then pcall(function() idleTrack:Stop(0.2); idleTrack:Destroy() end); idleTrack = nil end
 	if runTrack then pcall(function() runTrack:Stop(0.2); runTrack:Destroy() end); runTrack = nil end
@@ -157,7 +169,7 @@ local function isIdle()
 end
 
 --============================================================
--- ÖZEL SALDIRI OYNATMA FONKSİYONU
+-- ÖZEL SALDIRI & YETENEK FONKSİYONLARI
 --============================================================
 local function playAttack(animId)
 	if not animator then return end
@@ -179,6 +191,44 @@ local function playAttack(animId)
 		attackTrack.Priority = Enum.AnimationPriority.Action4
 		attackTrack.Looped = false
 		attackTrack:Play(0.2, 1, 1)
+	end
+end
+
+local function activateSmellThem()
+	-- Haritadaki herkesi bul (kendimiz hariç)
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj ~= character then
+			
+			local hl = Instance.new("Highlight")
+			hl.Name = "BerserkSmell"
+			hl.FillColor = Color3.fromRGB(180, 0, 0) -- Kan kırmızı
+			hl.OutlineColor = Color3.fromRGB(255, 0, 0)
+			hl.FillTransparency = 1 -- Başlangıçta görünmez
+			hl.OutlineTransparency = 1
+			hl.Parent = obj
+			
+			-- Yumuşak bir şekilde görünür yap
+			local tweenIn = TweenService:Create(hl, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				FillTransparency = 0.6,
+				OutlineTransparency = 0
+			})
+			tweenIn:Play()
+			
+			-- 5 Saniye sonra sil
+			task.delay(5, function()
+				if hl and hl.Parent then
+					local tweenOut = TweenService:Create(hl, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+						FillTransparency = 1,
+						OutlineTransparency = 1
+					})
+					tweenOut:Play()
+					
+					tweenOut.Completed:Connect(function()
+						hl:Destroy()
+					end)
+				end
+			end)
+		end
 	end
 end
 
@@ -313,6 +363,8 @@ local function createDropdown(parent, titleText, udimPos, anchor, sizeVec, items
 				playVoice(item.Id)
 			elseif type == "Attack" then
 				playAttack(item.Id)
+			elseif type == "Ability" then
+				if item.Id == "SMELL_THEM" then activateSmellThem() end
 			elseif type == "Stance" then
 				if currentStanceId == item.Id then
 					currentStanceId = nil
@@ -347,6 +399,11 @@ local function loadCombatGUI()
 
 	if ATTACKS[currentStyle] then
 		createDropdown(combatGui, "ATTACK", UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0), UDim2.new(0, 200, 0, 40), ATTACKS[currentStyle], "Attack")
+	end
+	
+	if ABILITIES[currentStyle] then
+		-- Attack butonunun altına yerleştirildi (Y: 60)
+		createDropdown(combatGui, "ABILITIES", UDim2.new(0.5, 0, 0, 60), Vector2.new(0.5, 0), UDim2.new(0, 200, 0, 40), ABILITIES[currentStyle], "Ability")
 	end
 
 	if STANCES[currentStyle] then
@@ -404,7 +461,20 @@ local function createSelectionGUI()
 			currentStyle = style
 			currentStanceId = nil
 			
-			if style == "Berserker" then applyBerserkerEffects() end
+			if style == "Berserker" then 
+				applyBerserkerEffects() 
+				
+				-- Berserker Hız Kilidi
+				speedCoroutine = task.spawn(function()
+					while currentStyle == "Berserker" do
+						if humanoid then humanoid.WalkSpeed = BERSERKER_SPEED end
+						task.wait(2)
+					end
+				end)
+			else
+				-- Diğer stillerde hızı sıfırla
+				if humanoid then humanoid.WalkSpeed = DEFAULT_SPEED end
+			end
 			
 			task.wait(0.1)
 			if animator then
